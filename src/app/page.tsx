@@ -153,7 +153,7 @@ export default function Home() {
               borderRadius: "8px",
             }}
           >
-            <Space direction="vertical" size="large" style={{ width: "100%" }}>
+            <Space orientation="vertical" size="large" style={{ width: "100%" }}>
               {tideData && (
                 <>
                   <div>
@@ -236,7 +236,7 @@ export default function Home() {
               borderRadius: "8px",
             }}
           >
-            <Space direction="vertical" size="large" style={{ width: "100%" }}>
+            <Space orientation="vertical" size="large" style={{ width: "100%" }}>
               {lanchaData?.isPassingNow ? (
                 <Alert
                   message="O barco está passando agora!"

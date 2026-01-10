@@ -36,7 +36,7 @@ export default function PassagemWindowItem({ window }: PassagemWindowItemProps) 
           </Space>
         }
         description={
-          <Space direction="vertical" size={0}>
+          <Space orientation="vertical" size={0}>
             <Text>
               <Text strong>Início:</Text> {formatTime(startDate)}
             </Text>
