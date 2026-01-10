@@ -4,8 +4,6 @@ import { Divider, Menu } from "antd";
 import { Grid } from "antd";
 import {
   AppstoreAddOutlined,
-  ClockCircleOutlined,
-  FolderOpenOutlined,
   HomeOutlined,
   LogoutOutlined,
   SettingOutlined,
@@ -34,48 +32,9 @@ export default function MenuContent({ styles }: MenuContentProps) {
       label: "Home",
     },
     {
-      key: "/my-library",
-      icon: <FolderOpenOutlined />,
-      label: "My Library",
-      children: [
-        {
-          key: "/my-library/projects",
-          label: "Projects",
-        },
-        {
-          key: "/my-library/drafts",
-          label: "Drafts",
-        },
-        {
-          key: "/my-library/templates",
-          label: "Templates",
-        },
-      ],
-    },
-    {
-      key: "/history",
-      icon: <ClockCircleOutlined />,
-      label: "History",
-    },
-    {
-      key: "/apps",
+      key: "/a-lancha-passa",
       icon: <AppstoreAddOutlined />,
-      label: "Apps",
-      children: [
-        {
-          key: "/apps/browse",
-          label: "Browse",
-        },
-        {
-          key: "/apps/your-apps",
-          label: "Your Apps",
-        },
-      ],
-    },
-    {
-      key: "/settings",
-      icon: <SettingOutlined />,
-      label: "Settings",
+      label: "A lancha passa?",
     },
   ];
 
@@ -129,25 +88,11 @@ export default function MenuContent({ styles }: MenuContentProps) {
   };
 
   const getSelectedKeys = () => {
-    if (pathname === "/") return ["/"];
-    if (pathname.startsWith("/my-library")) {
-      return [pathname];
-    }
-    if (pathname.startsWith("/apps")) {
-      return [pathname];
-    }
     return [pathname];
   };
 
   const getOpenKeys = () => {
-    const keys: string[] = [];
-    if (pathname.startsWith("/my-library")) {
-      keys.push("/my-library");
-    }
-    if (pathname.startsWith("/apps")) {
-      keys.push("/apps");
-    }
-    return keys;
+    return [];
   };
 
   return (

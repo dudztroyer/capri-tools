@@ -3,14 +3,12 @@ import React from "react";
 import { Space } from "antd";
 import PageBreadcrumb from "./PageBreadcrumb";
 import PageTitle from "./PageTitle";
-import ActionButtons, { ActionButton } from "./ActionButtons";
 
 interface AppHeaderProps {
   styles: any;
-  actions?: ActionButton[];
 }
 
-export default function AppHeader({ styles, actions }: AppHeaderProps) {
+export default function AppHeader({ styles }: AppHeaderProps) {
   return (
     <div style={styles.header}>
       <div style={styles.container}>
@@ -22,7 +20,6 @@ export default function AppHeader({ styles, actions }: AppHeaderProps) {
           <Space orientation="vertical">
             <PageTitle styles={styles} />
           </Space>
-          <ActionButtons actions={actions} />
         </Space>
       </div>
     </div>

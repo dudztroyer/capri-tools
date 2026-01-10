@@ -12,14 +12,9 @@ const { Text } = Typography;
 
 interface AppShellProps {
   children: React.ReactNode;
-  actions?: Array<{
-    label: string;
-    key: string;
-    type: "primary" | "default";
-  }>;
 }
 
-export default function AppShell({ children, actions }: AppShellProps) {
+export default function AppShell({ children }: AppShellProps) {
   const { token } = useToken();
   const screens = useBreakpoint();
 
@@ -117,7 +112,7 @@ export default function AppShell({ children, actions }: AppShellProps) {
       <Sidebar styles={styles} />
       <Layout>
         <MobileNavbar styles={styles} />
-        <AppHeader styles={styles} actions={actions} />
+        <AppHeader styles={styles} />
         <Content>
           <div style={styles.section}>
             <div style={styles.container}>
