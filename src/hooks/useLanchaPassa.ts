@@ -1,5 +1,5 @@
 import { useQuery, UseQueryResult } from "@tanstack/react-query";
-import { fetchTideData, TideDataWithInterpolation, ContinuousDataPoint } from "@/services/tideService";
+import { getTideDataWithInterpolation, TideDataWithInterpolation, ContinuousDataPoint } from "@/services/tideService";
 
 export interface PassagemWindow {
   start: Date;
@@ -388,8 +388,8 @@ async function fetchLanchaPassaData(): Promise<LanchaPassaData> {
   const currentYear = now.getFullYear();
   const harbor = "sc01";
 
-  // Fetch current month data with interpolation
-  const currentMonthData = await fetchTideData(harbor, currentMonth);
+  // Get current month data with interpolation
+  const currentMonthData = await getTideDataWithInterpolation(harbor, currentMonth);
 
   // If we need data beyond current month (for 7 days ahead)
   const allPoints: ContinuousDataPointWithMonth[] = [];
@@ -410,7 +410,7 @@ async function fetchLanchaPassaData(): Promise<LanchaPassaData> {
     const nextMonth = currentMonth === 12 ? 1 : currentMonth + 1;
     const nextMonthYear = currentMonth === 12 ? currentYear + 1 : currentYear;
     try {
-      const nextMonthData = await fetchTideData(harbor, nextMonth);
+      const nextMonthData = await getTideDataWithInterpolation(harbor, nextMonth);
       // Add next month's continuous data
       nextMonthData.continuousData.forEach(point => {
         allPoints.push({

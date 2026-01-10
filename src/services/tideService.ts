@@ -257,8 +257,8 @@ export async function getTideDataWithInterpolation(
       continuousData: sortedData,
     };
   } catch (error) {
-    console.error("Error fetching tide data:", error);
-    throw new Error(`Failed to fetch tide data: ${error instanceof Error ? error.message : "Unknown error"}`);
+    console.error("Error getting tide data with interpolation:", error);
+    throw new Error(`Failed to get tide data with interpolation: ${error instanceof Error ? error.message : "Unknown error"}`);
   }
 }
 

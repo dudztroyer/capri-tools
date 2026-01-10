@@ -1,8 +1,8 @@
 import { useQuery, UseQueryResult } from "@tanstack/react-query";
-import { fetchTideData, TideDataWithInterpolation } from "@/services/tideService";
+import { getTideDataWithInterpolation, TideDataWithInterpolation } from "@/services/tideService";
 
 /**
- * Hook to fetch tide data with interpolation for a specific harbor and month
+ * Hook to get tide data with interpolation for a specific harbor and month
  * 
  * @param harbor - Harbor ID (e.g., 'sc01')
  * @param month - Month number (1-12)
@@ -14,7 +14,7 @@ export function useTideDataForMonth(
 ): UseQueryResult<TideDataWithInterpolation, Error> {
   return useQuery<TideDataWithInterpolation, Error>({
     queryKey: ["tideData", harbor, month],
-    queryFn: () => fetchTideData(harbor, month),
+    queryFn: () => getTideDataWithInterpolation(harbor, month),
     staleTime: Infinity, // Data doesn't change once fetched for a specific month
     gcTime: 24 * 60 * 60 * 1000, // Keep in cache for 24 hours
     enabled: harbor !== "" && month >= 1 && month <= 12,
