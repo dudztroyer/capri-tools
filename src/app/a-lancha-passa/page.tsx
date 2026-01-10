@@ -19,7 +19,7 @@ export default function ALanchaPassa() {
   if (error) {
     return (
       <Alert
-        message="Erro ao carregar dados"
+        title="Erro ao carregar dados"
         description="Não foi possível obter os dados. Por favor, tente novamente mais tarde."
         type="error"
         showIcon

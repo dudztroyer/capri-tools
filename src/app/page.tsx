@@ -123,7 +123,7 @@ export default function Home() {
   if (hasError) {
     return (
       <Alert
-        message="Erro ao carregar dados"
+        title="Erro ao carregar dados"
         description="Não foi possível obter os dados. Por favor, tente novamente mais tarde."
         type="error"
         showIcon
@@ -153,7 +153,7 @@ export default function Home() {
               borderRadius: "8px",
             }}
           >
-            <Space orientation="vertical" size="large" style={{ width: "100%" }}>
+            <Space orientation="vertical" style={{ width: "100%" }}>
               {tideData && (
                 <>
                   <div>
@@ -236,10 +236,10 @@ export default function Home() {
               borderRadius: "8px",
             }}
           >
-            <Space orientation="vertical" size="large" style={{ width: "100%" }}>
+            <Space orientation="vertical" style={{ width: "100%" }}>
               {lanchaData?.isPassingNow ? (
                 <Alert
-                  message="O barco está passando agora!"
+                  title="O barco está passando agora!"
                   description={
                     lanchaData.currentWindowEnd
                       ? `Pode passar até ${formatDateTime(new Date(lanchaData.currentWindowEnd))}`
@@ -251,7 +251,7 @@ export default function Home() {
                 />
               ) : (
                 <Alert
-                  message="O barco não está passando no momento"
+                  title="O barco não está passando no momento"
                   description={
                     lanchaData?.nextPassage
                       ? `Próxima janela de passagem: ${formatDateTime(new Date(lanchaData.nextPassage))}`

@@ -13,7 +13,6 @@ export default function AppHeader({ styles }: AppHeaderProps) {
   return (
     <div style={styles.header}>
       <div style={styles.container}>
-        <PageBreadcrumb />
         <Space
           size="middle"
           style={styles.headerTitleWrapper}

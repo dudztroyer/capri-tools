@@ -83,7 +83,7 @@ export default function TideTablePage() {
   if (error) {
     return (
       <Alert
-        message="Erro ao carregar dados da tábua de maré"
+        title="Erro ao carregar dados da tábua de maré"
         description={error.message || "Não foi possível obter os dados da tábua de maré. Por favor, tente novamente mais tarde."}
         type="error"
         showIcon

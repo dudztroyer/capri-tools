@@ -37,7 +37,7 @@ export default function MinMaxChart({ chartData, isCurrentMonth, currentDay }: M
     >
       {chartData.length === 0 ? (
         <Alert
-          message="Nenhum dado disponível"
+          title="Nenhum dado disponível"
           description="Não há dados de maré disponíveis para o mês selecionado."
           type="info"
           showIcon

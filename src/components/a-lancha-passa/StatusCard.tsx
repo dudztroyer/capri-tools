@@ -34,10 +34,10 @@ export default function StatusCard({ data }: StatusCardProps) {
         borderRadius: "8px",
       }}
     >
-      <Space orientation="vertical" size="large" style={{ width: "100%" }}>
+      <Space orientation="vertical" style={{ width: "100%" }}>
         {data.isPassingNow ? (
           <Alert
-            message="A lancha está passando agora!"
+            title="A lancha está passando agora!"
             description={
               data.currentWindowEnd
                 ? `Pode passar até ${formatDateTime(new Date(data.currentWindowEnd))}`
@@ -49,7 +49,7 @@ export default function StatusCard({ data }: StatusCardProps) {
           />
         ) : (
           <Alert
-            message="A lancha não está passando no momento"
+            title="A lancha não está passando no momento"
             description="Aguarde uma janela de passagem adequada."
             type="info"
             showIcon
