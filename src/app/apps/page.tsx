@@ -1,10 +1,11 @@
 "use client";
 import { Typography } from "antd";
 
-export default function Home() {
+export default function Apps() {
   return (
     <div style={{ padding: "24px", textAlign: "center" }}>
-      <Typography.Text>Welcome to Home</Typography.Text>
+      <Typography.Text>Apps</Typography.Text>
     </div>
   );
 }
+
