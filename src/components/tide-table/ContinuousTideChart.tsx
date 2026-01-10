@@ -36,6 +36,8 @@ interface ContinuousTideChartProps {
     onGoToNow: () => void;
     onGoToToday: () => void;
     onGoToTomorrow: () => void;
+    onGoToPreviousDay: (baseDay: number) => void;
+    onGoToNextDay: (baseDay: number) => void;
 }
 
 export default function ContinuousTideChart({
@@ -47,13 +49,23 @@ export default function ContinuousTideChart({
     onGoToNow,
     onGoToToday,
     onGoToTomorrow,
+    onGoToPreviousDay,
+    onGoToNextDay,
 }: ContinuousTideChartProps) {
     // Calculate current brush range
     const currentStartIndex = brushRange ? brushRange[0] : (initialBrushRange ? initialBrushRange[0] : 0);
     const currentEndIndex = brushRange ? brushRange[1] : (initialBrushRange ? initialBrushRange[1] : Math.min(50, data.length - 1));
-
+    
     // Calculate fixed brush size (26 hours = 52 points at 15min intervals)
     const fixedBrushSize = 13 * 4; // 52 points = 13 hours * 4 points per hour
+
+    // Calculate the centered day in the current brush range
+    const centeredDay = useMemo(() => {
+        if (data.length === 0) return null;
+        const centerIndex = Math.floor((currentStartIndex + currentEndIndex) / 2);
+        const centerPoint = data[Math.max(0, Math.min(data.length - 1, centerIndex))];
+        return centerPoint ? centerPoint.day : null;
+    }, [data, currentStartIndex, currentEndIndex]);
 
     // Get selected period
     const selectedPeriod = useMemo(() => {
@@ -159,7 +171,13 @@ export default function ContinuousTideChart({
                     {isCurrentMonth && (
 
                         <Space.Compact>
-                            <Button type="primary" onClick={onGoToNow}><ArrowLeftOutlined /></Button>
+                            <Button 
+                                type="primary" 
+                                onClick={() => centeredDay !== null && onGoToPreviousDay(centeredDay)}
+                                disabled={centeredDay === null}
+                            >
+                                <ArrowLeftOutlined />
+                            </Button>
                             <Button type="primary" onClick={onGoToNow}>Ir para Agora</Button>
                             <Dropdown
                                 menu={{
@@ -182,7 +200,13 @@ export default function ContinuousTideChart({
                                 <Button icon={<EllipsisOutlined />} type="primary" />
                             </Dropdown>
                             
-                            <Button type="primary" onClick={onGoToNow}><ArrowRightOutlined /></Button>
+                            <Button 
+                                type="primary" 
+                                onClick={() => centeredDay !== null && onGoToNextDay(centeredDay)}
+                                disabled={centeredDay === null}
+                            >
+                                <ArrowRightOutlined />
+                            </Button>
                         </Space.Compact>
                     )}
                 </Space>
