@@ -26,7 +26,7 @@ export default function TideTablePage() {
   const { chartData, continuousChartData } = useTideChartData(data);
 
   // Calculate brush range for current moment
-  const { initialBrushRange, getNowRange } = useCurrentDayRange(
+  const { initialBrushRange, getNowRange, getTodayRange, getTomorrowRange, getPreviousDayRange, getNextDayRange } = useCurrentDayRange(
     continuousChartData,
     isCurrentMonth,
     currentDay
@@ -37,6 +37,38 @@ export default function TideTablePage() {
     const nowRange = getNowRange();
     if (nowRange) {
       setBrushRange(nowRange);
+    }
+  };
+
+  // Go to today (noon) button handler
+  const goToToday = () => {
+    const todayRange = getTodayRange();
+    if (todayRange) {
+      setBrushRange(todayRange);
+    }
+  };
+
+  // Go to tomorrow (noon) button handler
+  const goToTomorrow = () => {
+    const tomorrowRange = getTomorrowRange();
+    if (tomorrowRange) {
+      setBrushRange(tomorrowRange);
+    }
+  };
+
+  // Go to previous day (noon) button handler
+  const goToPreviousDay = () => {
+    const previousDayRange = getPreviousDayRange();
+    if (previousDayRange) {
+      setBrushRange(previousDayRange);
+    }
+  };
+
+  // Go to next day (noon) button handler
+  const goToNextDay = () => {
+    const nextDayRange = getNextDayRange();
+    if (nextDayRange) {
+      setBrushRange(nextDayRange);
     }
   };
 
@@ -81,6 +113,10 @@ export default function TideTablePage() {
         initialBrushRange={initialBrushRange}
         onBrushChange={setBrushRange}
         onGoToNow={goToNow}
+        onGoToToday={goToToday}
+        onGoToTomorrow={goToTomorrow}
+        onGoToPreviousDay={goToPreviousDay}
+        onGoToNextDay={goToNextDay}
       />
 
       <TideStatistics

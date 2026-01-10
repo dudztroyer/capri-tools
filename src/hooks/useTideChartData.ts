@@ -15,6 +15,7 @@ interface ContinuousDataPoint {
   timestamp: string;
   height: number;
   sortKey: number;
+  isOriginal?: boolean; // Flag to identify original points from API
   isDirectionChange?: boolean;
   direction?: "up" | "down"; // "up" = maré subindo (mínimo), "down" = maré descendo (máximo)
 }
@@ -97,7 +98,26 @@ export function useTideChartData(data?: TideTableResponse) {
       const current = sortedEntries[i];
       const currentMinutes = toMinutes(current.day, current.hour, current.minute);
 
-      // Add the current point
+      // Determine direction based on next original point
+      let direction: "up" | "down" | undefined;
+      if (i < sortedEntries.length - 1) {
+        const next = sortedEntries[i + 1];
+        if (next.height > current.height) {
+          direction = "up"; // Próximo ponto é maior, maré está subindo
+        } else if (next.height < current.height) {
+          direction = "down"; // Próximo ponto é menor, maré está descendo
+        }
+      } else if (i > 0) {
+        // Last point: use previous point to determine direction
+        const prev = sortedEntries[i - 1];
+        if (current.height > prev.height) {
+          direction = "up"; // Ponto atual é maior que anterior, estava subindo
+        } else if (current.height < prev.height) {
+          direction = "down"; // Ponto atual é menor que anterior, estava descendo
+        }
+      }
+
+      // Add the current point (original from API)
       const hourStr = current.hour.toString().padStart(2, "0");
       const minuteStr = current.minute.toString().padStart(2, "0");
       interpolatedData.push({
@@ -107,6 +127,9 @@ export function useTideChartData(data?: TideTableResponse) {
         timestamp: `${current.day}/${hourStr}:${minuteStr}`,
         height: current.height,
         sortKey: current.day * 10000 + current.hour * 100 + current.minute,
+        isOriginal: true, // Mark as original point
+        isDirectionChange: true, // All original points are direction changes
+        direction: direction,
       });
 
       // If there's a next point, interpolate between them
@@ -179,7 +202,9 @@ export function useTideChartData(data?: TideTableResponse) {
     }
 
     // Sort by sortKey to ensure correct order
-    return interpolatedData.sort((a, b) => a.sortKey - b.sortKey);
+    const sortedData = interpolatedData.sort((a, b) => a.sortKey - b.sortKey);
+
+    return sortedData;
   }, [data]);
 
   return { chartData, continuousChartData };
