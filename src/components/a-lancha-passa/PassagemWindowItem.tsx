@@ -1,6 +1,6 @@
 "use client";
 import React from "react";
-import { List, Typography, Tag, Space } from "antd";
+import { Typography, Tag, Space } from "antd";
 import { CalendarOutlined } from "@ant-design/icons";
 import { PassagemWindow } from "@/hooks/useLanchaPassa";
 import { formatTime, formatDateOnly } from "./utils";
@@ -21,10 +21,21 @@ export default function PassagemWindowItem({ window }: PassagemWindowItemProps) 
   const isDifferentDay = startDate.toDateString() !== endDate.toDateString();
 
   return (
-    <List.Item>
-      <List.Item.Meta
-        avatar={<CalendarOutlined style={{ fontSize: "20px", color: "#1890ff" }} />}
-        title={
+    <div
+      style={{
+        display: "flex",
+        gap: "16px",
+        padding: "16px",
+        border: "1px solid #f0f0f0",
+        borderRadius: "8px",
+        backgroundColor: "#fafafa",
+      }}
+    >
+      <div style={{ flexShrink: 0 }}>
+        <CalendarOutlined style={{ fontSize: "20px", color: "#1890ff" }} />
+      </div>
+      <div style={{ flex: 1 }}>
+        <Space orientation="vertical" size={4} style={{ width: "100%" }}>
           <Space>
             <Text strong>
               {isDifferentDay 
@@ -34,8 +45,6 @@ export default function PassagemWindowItem({ window }: PassagemWindowItemProps) 
             </Text>
             <Tag color="success">Janela de Passagem</Tag>
           </Space>
-        }
-        description={
           <Space orientation="vertical" size={0}>
             <Text>
               <Text strong>Início:</Text> {formatTime(startDate)}
@@ -80,9 +89,9 @@ export default function PassagemWindowItem({ window }: PassagemWindowItemProps) 
               Duração: {duration} minutos
             </Text>
           </Space>
-        }
-      />
-    </List.Item>
+        </Space>
+      </div>
+    </div>
   );
 }
 

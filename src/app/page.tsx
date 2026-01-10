@@ -11,9 +11,8 @@ import {
   CalendarOutlined,
   EyeOutlined
 } from "@ant-design/icons";
-import { useTideData } from "@/hooks/useTideData";
 import { useLanchaPassa } from "@/hooks/useLanchaPassa";
-import { useTideTableData } from "@/hooks/useTideTableData";
+import { useCurrentTide } from "@/hooks/useCurrentTide";
 import { useTideChartData } from "@/hooks/useTideChartData";
 import { useCurrentDayRange } from "@/hooks/useCurrentDayRange";
 import ContinuousTideChart from "@/components/tide-table/ContinuousTideChart";
@@ -27,13 +26,12 @@ export default function Home() {
   const currentMonth = currentDate.getMonth() + 1;
   const currentDay = currentDate.getDate();
   
-  const { data: tideData, isLoading: isLoadingTide, error: tideError } = useTideData();
+  const { data: tideData, isLoading: isLoadingTide, error: tideError } = useCurrentTide(HARBOR);
   const { data: lanchaData, isLoading: isLoadingLancha, error: lanchaError } = useLanchaPassa();
-  const { data: tideTableData, isLoading: isLoadingTable, error: tableError } = useTideTableData(HARBOR, currentMonth);
   
   const [brushRange, setBrushRange] = useState<[number, number] | null>(null);
   
-  const { chartData, continuousChartData } = useTideChartData(tideTableData);
+  const { chartData, continuousChartData } = useTideChartData(tideData);
   
   const { initialBrushRange, getNowRange, getTodayRange, getTomorrowRange, getPreviousDayRange, getNextDayRange } = useCurrentDayRange(
     continuousChartData,
@@ -41,27 +39,33 @@ export default function Home() {
     currentDay
   );
 
-  // Calculate next direction change time
+  // Calculate next direction change time from continuous data
   const nextDirectionChange = useMemo(() => {
-    if (!tideData || !lanchaData?.currentDirection) return null;
+    if (!tideData?.continuousData || !lanchaData?.currentDirection) return null;
     
     const now = new Date();
-    const nextHigh = tideData.nextHigh ? new Date(tideData.nextHigh.timestamp) : null;
-    const nextLow = tideData.nextLow ? new Date(tideData.nextLow.timestamp) : null;
+    const currentYear = new Date().getFullYear();
+    const currentMonth = new Date().getMonth() + 1;
     
-    // If tide is rising, next change is at next high (will start falling)
-    // If tide is falling, next change is at next low (will start rising)
-    if (lanchaData.currentDirection === "up" && nextHigh) {
-      return nextHigh;
-    } else if (lanchaData.currentDirection === "down" && nextLow) {
-      return nextLow;
+    // Find the next direction change by looking for points where direction changes
+    const sortedPoints = [...tideData.continuousData].sort((a, b) => {
+      const dateA = new Date(currentYear, currentMonth - 1, a.day, a.hour, a.minute);
+      const dateB = new Date(currentYear, currentMonth - 1, b.day, b.hour, b.minute);
+      return dateA.getTime() - dateB.getTime();
+    });
+    
+    // Find the first point after now where direction changes
+    for (let i = 0; i < sortedPoints.length - 1; i++) {
+      const point = sortedPoints[i];
+      const nextPoint = sortedPoints[i + 1];
+      const pointDate = new Date(currentYear, currentMonth - 1, point.day, point.hour, point.minute);
+      
+      if (pointDate > now && point.direction && nextPoint.direction && point.direction !== nextPoint.direction) {
+        return pointDate;
+      }
     }
     
-    // Fallback: return whichever is sooner
-    if (nextHigh && nextLow) {
-      return nextHigh < nextLow ? nextHigh : nextLow;
-    }
-    return nextHigh || nextLow;
+    return null;
   }, [tideData, lanchaData]);
 
   const formatDateTime = (date: Date | null): string => {
@@ -109,8 +113,8 @@ export default function Home() {
     }
   };
 
-  const isLoading = isLoadingTide || isLoadingLancha || isLoadingTable;
-  const hasError = tideError || lanchaError || tableError;
+  const isLoading = isLoadingTide || isLoadingLancha;
+  const hasError = tideError || lanchaError;
 
   if (isLoading) {
     return (
@@ -154,11 +158,22 @@ export default function Home() {
             }}
           >
             <Space orientation="vertical" style={{ width: "100%" }}>
-              {tideData && (
+              {tideData && tideData.continuousData.length > 0 && (
                 <>
                   <div>
                     <Title level={2} style={{ margin: 0 }}>
-                      {tideData.current.height.toFixed(2)}m
+                      {(() => {
+                        // Find current height from closest point to now
+                        const now = new Date();
+                        const currentYear = new Date().getFullYear();
+                        const currentMonth = new Date().getMonth() + 1;
+                        const sortedPoints = [...tideData.continuousData].sort((a, b) => {
+                          const dateA = new Date(currentYear, currentMonth - 1, a.day, a.hour, a.minute);
+                          const dateB = new Date(currentYear, currentMonth - 1, b.day, b.hour, b.minute);
+                          return Math.abs(dateA.getTime() - now.getTime()) - Math.abs(dateB.getTime() - now.getTime());
+                        });
+                        return sortedPoints[0]?.height.toFixed(2) || "0.00";
+                      })()}m
                     </Title>
                     <Text type="secondary">Altura atual da maré</Text>
                   </div>

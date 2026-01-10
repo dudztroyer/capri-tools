@@ -1,6 +1,5 @@
 import { useQuery, UseQueryResult } from "@tanstack/react-query";
-import { fetchTideData, fetchTideTableData, TideTableResponse, TideResponse } from "@/services/tideService";
-import { useTideChartData } from "./useTideChartData";
+import { fetchTideData, TideDataWithInterpolation, ContinuousDataPoint } from "@/services/tideService";
 
 export interface PassagemWindow {
   start: Date;
@@ -30,21 +29,16 @@ function isPassable(height: number): boolean {
   return height >= MIN_HEIGHT && height <= MAX_HEIGHT;
 }
 
-interface ContinuousDataPoint {
-  day: number;
-  hour: number;
-  minute: number;
-  height: number;
+interface ContinuousDataPointWithMonth extends ContinuousDataPoint {
   month?: number;
   year?: number;
-  direction?: "up" | "down"; // Direção da maré neste ponto
 }
 
 /**
  * Creates a Date object from continuous data point
  */
 function createDateFromPoint(
-  point: ContinuousDataPoint,
+  point: ContinuousDataPointWithMonth,
   year?: number,
   month?: number
 ): Date {
@@ -59,7 +53,7 @@ function createDateFromPoint(
  * Uses granular 15-minute interpolated data for better accuracy
  */
 function findPassagemWindows(
-  points: ContinuousDataPoint[],
+  points: ContinuousDataPointWithMonth[],
   startDate: Date,
   endDate: Date
 ): PassagemWindow[] {
@@ -83,7 +77,7 @@ function findPassagemWindows(
   }
 
   // Helper function to determine direction between two points
-  function getDirection(point1: ContinuousDataPoint, point2: ContinuousDataPoint): "up" | "down" | undefined {
+  function getDirection(point1: ContinuousDataPointWithMonth, point2: ContinuousDataPointWithMonth): "up" | "down" | undefined {
     if (point2.height > point1.height) {
       return "up";
     } else if (point2.height < point1.height) {
@@ -94,8 +88,8 @@ function findPassagemWindows(
 
   // Group consecutive passable points into windows
   let windowStart: Date | null = null;
-  let lastPassablePoint: ContinuousDataPoint | null = null;
-  let windowPoints: ContinuousDataPoint[] = [];
+  let lastPassablePoint: ContinuousDataPointWithMonth | null = null;
+  let windowPoints: ContinuousDataPointWithMonth[] = [];
 
   for (let i = 0; i < relevantPoints.length; i++) {
     const point = relevantPoints[i];
@@ -263,33 +257,25 @@ function findPassagemWindows(
 }
 
 /**
- * Calculates lancha passa data from continuous tide data points and current tide
+ * Calculates lancha passa data from continuous tide data points
  * Handles points from multiple months
  */
 function calculateLanchaPassaDataFromPoints(
-  points: ContinuousDataPoint[],
-  currentTide: TideResponse
+  points: ContinuousDataPointWithMonth[]
 ): LanchaPassaData {
   const now = new Date();
   const sevenDaysLater = new Date(now);
   sevenDaysLater.setDate(sevenDaysLater.getDate() + 7);
 
-  // Check current status using real-time tide data
-  const currentHeight = currentTide.current.height;
-  const isPassingNow = isPassable(currentHeight);
-
-  // Calculate current direction by finding the closest point to now and comparing with next point
-  let currentDirection: "up" | "down" | undefined;
+  // Find current height from the closest point to now
   const sortedPoints = [...points].sort((a, b) => {
     const dateA = createDateFromPoint(a);
     const dateB = createDateFromPoint(b);
     return dateA.getTime() - dateB.getTime();
   });
 
-  // Find the closest point to now
   const nowTime = now.getTime();
-  let closestPoint: ContinuousDataPoint | undefined;
-  let closestIndex = -1;
+  let closestPoint: ContinuousDataPointWithMonth | undefined;
   let minDiff = Infinity;
 
   for (let i = 0; i < sortedPoints.length; i++) {
@@ -298,17 +284,32 @@ function calculateLanchaPassaDataFromPoints(
     if (diff < minDiff) {
       minDiff = diff;
       closestPoint = sortedPoints[i];
-      closestIndex = i;
     }
   }
 
-  // Determine direction by comparing with next point
-  if (closestPoint && closestIndex >= 0 && closestIndex < sortedPoints.length - 1) {
-    const nextPoint = sortedPoints[closestIndex + 1];
-    if (nextPoint.height > closestPoint.height) {
-      currentDirection = "up";
-    } else if (nextPoint.height < closestPoint.height) {
-      currentDirection = "down";
+  // Check current status using closest point height
+  const currentHeight = closestPoint?.height ?? 0;
+  const isPassingNow = isPassable(currentHeight);
+
+  // Calculate current direction by comparing closest point with next point
+  let currentDirection: "up" | "down" | undefined;
+  if (closestPoint) {
+    const closestIndex = sortedPoints.findIndex(p => 
+      p.day === closestPoint!.day && 
+      p.hour === closestPoint!.hour && 
+      p.minute === closestPoint!.minute
+    );
+    
+    // Use direction from point if available, otherwise compare with next point
+    if (closestPoint.direction) {
+      currentDirection = closestPoint.direction;
+    } else if (closestIndex >= 0 && closestIndex < sortedPoints.length - 1) {
+      const nextPoint = sortedPoints[closestIndex + 1];
+      if (nextPoint.height > closestPoint.height) {
+        currentDirection = "up";
+      } else if (nextPoint.height < closestPoint.height) {
+        currentDirection = "down";
+      }
     }
   }
 
@@ -385,15 +386,22 @@ async function fetchLanchaPassaData(): Promise<LanchaPassaData> {
   const now = new Date();
   const currentMonth = now.getMonth() + 1;
   const currentYear = now.getFullYear();
+  const harbor = "sc01";
 
-  // Fetch current tide data for real-time status
-  const currentTide = await fetchTideData();
-
-  // Fetch current month data
-  const currentMonthData = await fetchTideTableData("sc01", currentMonth);
+  // Fetch current month data with interpolation
+  const currentMonthData = await fetchTideData(harbor, currentMonth);
 
   // If we need data beyond current month (for 7 days ahead)
-  const allMonthData: TideTableResponse[] = [currentMonthData];
+  const allPoints: ContinuousDataPointWithMonth[] = [];
+  
+  // Add current month's continuous data
+  currentMonthData.continuousData.forEach(point => {
+    allPoints.push({
+      ...point,
+      month: currentMonthData.month,
+      year: currentMonthData.year,
+    });
+  });
   
   const daysUntilMonthEnd = new Date(currentYear, currentMonth, 0).getDate() - now.getDate();
   
@@ -402,163 +410,22 @@ async function fetchLanchaPassaData(): Promise<LanchaPassaData> {
     const nextMonth = currentMonth === 12 ? 1 : currentMonth + 1;
     const nextMonthYear = currentMonth === 12 ? currentYear + 1 : currentYear;
     try {
-      const nextMonthData = await fetchTideTableData("sc01", nextMonth);
-      allMonthData.push(nextMonthData);
+      const nextMonthData = await fetchTideData(harbor, nextMonth);
+      // Add next month's continuous data
+      nextMonthData.continuousData.forEach(point => {
+        allPoints.push({
+          ...point,
+          month: nextMonthData.month,
+          year: nextMonthData.year || nextMonthYear,
+        });
+      });
     } catch (error) {
       console.error("Error fetching next month data:", error);
     }
   }
 
-  // Combine all data and get continuous chart data (interpolated at 15-minute intervals)
-  const allPoints: ContinuousDataPoint[] = [];
-  
-  for (const monthData of allMonthData) {
-    const month = monthData.month || currentMonth;
-    const year = monthData.year || currentYear;
-    
-    // Use useTideChartData logic to get interpolated points
-    // Since we can't use hooks in async functions, we'll replicate the interpolation logic
-    const sortedEntries = [...monthData.data].sort((a, b) => {
-      if (a.day !== b.day) return a.day - b.day;
-      if (a.hour !== b.hour) return a.hour - b.hour;
-      return a.minute - b.minute;
-    });
-
-    // Helper function to convert day/hour/minute to total minutes
-    const toMinutes = (day: number, hour: number, minute: number) => {
-      return day * 24 * 60 + hour * 60 + minute;
-    };
-
-    // Helper function to convert total minutes back to day/hour/minute
-    const fromMinutes = (totalMinutes: number) => {
-      const day = Math.floor(totalMinutes / (24 * 60));
-      const remainingMinutes = totalMinutes % (24 * 60);
-      const hour = Math.floor(remainingMinutes / 60);
-      const minute = remainingMinutes % 60;
-      return { day, hour, minute };
-    };
-
-    // Helper function for smooth cubic interpolation (smoothstep)
-    const smoothstep = (t: number): number => {
-      return t * t * (3 - 2 * t);
-    };
-
-    // Helper function for smooth interpolation using cubic easing
-    const interpolate = (x1: number, y1: number, x2: number, y2: number, x: number) => {
-      if (x2 === x1) return y1;
-      const t = (x - x1) / (x2 - x1);
-      const smoothT = smoothstep(t);
-      return y1 + (y2 - y1) * smoothT;
-    };
-
-    // Process each pair of consecutive points
-    for (let i = 0; i < sortedEntries.length; i++) {
-      const current = sortedEntries[i];
-      const currentMinutes = toMinutes(current.day, current.hour, current.minute);
-
-      // Determine direction based on next original point
-      let direction: "up" | "down" | undefined;
-      if (i < sortedEntries.length - 1) {
-        const next = sortedEntries[i + 1];
-        if (next.height > current.height) {
-          direction = "up"; // Próximo ponto é maior, maré está subindo
-        } else if (next.height < current.height) {
-          direction = "down"; // Próximo ponto é menor, maré está descendo
-        }
-      } else if (i > 0) {
-        // Last point: use previous point to determine direction
-        const prev = sortedEntries[i - 1];
-        if (current.height > prev.height) {
-          direction = "up"; // Ponto atual é maior que anterior, estava subindo
-        } else if (current.height < prev.height) {
-          direction = "down"; // Ponto atual é menor que anterior, estava descendo
-        }
-      }
-
-      // Add the current point (original from API)
-      allPoints.push({
-        day: current.day,
-        hour: current.hour,
-        minute: current.minute,
-        height: current.height,
-        month,
-        year,
-        direction,
-      });
-
-      // If there's a next point, interpolate between them
-      if (i < sortedEntries.length - 1) {
-        const next = sortedEntries[i + 1];
-        const nextMinutes = toMinutes(next.day, next.hour, next.minute);
-        const timeDiff = nextMinutes - currentMinutes;
-
-        // Only interpolate if the gap is more than 15 minutes
-        if (timeDiff > 15) {
-          // Find the next 15-minute rounded time (00, 15, 30, 45)
-          const getNextRoundedTime = (minutes: number) => {
-            const { day, hour, minute } = fromMinutes(minutes);
-            let roundedMinute: number;
-            if (minute === 0) {
-              roundedMinute = 15;
-            } else if (minute <= 15) {
-              roundedMinute = 15;
-            } else if (minute <= 30) {
-              roundedMinute = 30;
-            } else if (minute <= 45) {
-              roundedMinute = 45;
-            } else {
-              roundedMinute = 0;
-              const roundedHour = hour + 1;
-              if (roundedHour >= 24) {
-                return toMinutes(day + 1, 0, 0);
-              }
-              return toMinutes(day, roundedHour, 0);
-            }
-            return toMinutes(day, hour, roundedMinute);
-          };
-
-          // Start from the next rounded 15-minute interval
-          let interpolatedMinutes = getNextRoundedTime(currentMinutes);
-          
-          // Generate points every 15 minutes (00, 15, 30, 45) between current and next
-          while (interpolatedMinutes < nextMinutes) {
-            const { day, hour, minute } = fromMinutes(interpolatedMinutes);
-            
-            // Only add if minute is 0, 15, 30, or 45
-            if (minute === 0 || minute === 15 || minute === 30 || minute === 45) {
-              const interpolatedHeight = interpolate(
-                currentMinutes,
-                current.height,
-                nextMinutes,
-                next.height,
-                interpolatedMinutes
-              );
-
-              // Determine direction for interpolated point
-              const interpolatedDirection = next.height > current.height ? "up" : 
-                                          next.height < current.height ? "down" : undefined;
-
-              allPoints.push({
-                day,
-                hour,
-                minute,
-                height: interpolatedHeight,
-                month,
-                year,
-                direction: interpolatedDirection,
-              });
-            }
-
-            // Move to next 15-minute interval
-            interpolatedMinutes += 15;
-          }
-        }
-      }
-    }
-  }
-
   // Calculate with all interpolated points
-  return calculateLanchaPassaDataFromPoints(allPoints, currentTide);
+  return calculateLanchaPassaDataFromPoints(allPoints);
 }
 
 /**

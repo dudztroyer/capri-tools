@@ -62,74 +62,203 @@ export interface TideTableApiResponse {
   total: number;
 }
 
+export interface ContinuousDataPoint {
+  day: number;
+  hour: number;
+  minute: number;
+  timestamp: string;
+  height: number;
+  sortKey: number;
+  isOriginal?: boolean; // Flag to identify original points from API
+  isDirectionChange?: boolean;
+  direction?: "up" | "down"; // "up" = maré subindo (mínimo), "down" = maré descendo (máximo)
+}
+
+export interface TideDataWithInterpolation extends TideTableResponse {
+  continuousData: ContinuousDataPoint[];
+}
+
 /**
- * Fetches tide data for São Francisco do Sul, Brazil
+ * Gets tide data for a specific harbor and month with interpolated 15-minute intervals
+ * Fetches tide table data and adds interpolation calculations
  * 
- * Note: This implementation uses simulated data based on realistic tide patterns.
- * For production, replace with an actual Brazilian tide API such as:
- * - CHM (Centro de Hidrografia da Marinha) API
- * - Brazilian Navy tide stations
- * - Or integrate with a global tide service that covers Brazil
+ * @param harbor - Harbor ID (e.g., 'sc01')
+ * @param month - Month number (1-12)
+ * @returns Promise with tide table data plus interpolated continuous data points
  */
-export async function fetchTideData(): Promise<TideResponse> {
+export async function getTideDataWithInterpolation(
+  harbor: string,
+  month: number
+): Promise<TideDataWithInterpolation> {
   try {
-    // Simulate API delay
-    await new Promise((resolve) => setTimeout(resolve, 500));
+    // Fetch the base tide table data
+    const tideTableData = await fetchTideTableData(harbor, month);
 
-    const now = new Date();
-    const hours = now.getHours();
-    const minutes = now.getMinutes();
-    const timeOfDay = hours + minutes / 60;
-
-    // Simulate realistic tide patterns for São Francisco do Sul
-    // Tides typically cycle every ~12.5 hours (semi-diurnal)
-    // Using a sine wave to simulate natural tide patterns
-    const tideCycle = (timeOfDay / 12.5) * 2 * Math.PI;
-    const baseHeight = 0.9; // Average tide level
-    const amplitude = 0.5; // Tide variation
-    const currentHeight = baseHeight + amplitude * Math.sin(tideCycle);
-
-    // Calculate next high and low tides
-    const nextHighTime = new Date(now);
-    const nextLowTime = new Date(now);
-    
-    // Find next high tide (peak of sine wave)
-    let nextHighOffset = 0;
-    while (Math.sin((timeOfDay + nextHighOffset) / 12.5 * 2 * Math.PI) < 0.9) {
-      nextHighOffset += 0.1;
+    // If no data, return empty structure
+    if (!tideTableData.data || tideTableData.data.length === 0) {
+      return {
+        ...tideTableData,
+        continuousData: [],
+      };
     }
-    nextHighTime.setHours(hours + Math.floor(nextHighOffset), minutes + (nextHighOffset % 1) * 60);
-    
-    // Find next low tide (trough of sine wave)
-    let nextLowOffset = 0;
-    while (Math.sin((timeOfDay + nextLowOffset) / 12.5 * 2 * Math.PI) > -0.9) {
-      nextLowOffset += 0.1;
-    }
-    nextLowTime.setHours(hours + Math.floor(nextLowOffset), minutes + (nextLowOffset % 1) * 60);
 
-    const nextHighHeight = baseHeight + amplitude;
-    const nextLowHeight = baseHeight - amplitude;
+    // Sort entries by day, then by hour and minute
+    const sortedEntries = [...tideTableData.data].sort((a, b) => {
+      if (a.day !== b.day) return a.day - b.day;
+      if (a.hour !== b.hour) return a.hour - b.hour;
+      return a.minute - b.minute;
+    });
+
+    // Helper function to convert day/hour/minute to total minutes
+    const toMinutes = (day: number, hour: number, minute: number) => {
+      return day * 24 * 60 + hour * 60 + minute;
+    };
+
+    // Helper function to convert total minutes back to day/hour/minute
+    const fromMinutes = (totalMinutes: number) => {
+      const day = Math.floor(totalMinutes / (24 * 60));
+      const remainingMinutes = totalMinutes % (24 * 60);
+      const hour = Math.floor(remainingMinutes / 60);
+      const minute = remainingMinutes % 60;
+      return { day, hour, minute };
+    };
+
+    // Helper function for smooth cubic interpolation (smoothstep)
+    const smoothstep = (t: number): number => {
+      return t * t * (3 - 2 * t);
+    };
+
+    // Helper function for smooth interpolation using cubic easing
+    const interpolate = (x1: number, y1: number, x2: number, y2: number, x: number) => {
+      if (x2 === x1) return y1;
+      // Normalize x to [0, 1] range
+      const t = (x - x1) / (x2 - x1);
+      // Apply smoothstep function for smooth curve
+      const smoothT = smoothstep(t);
+      // Interpolate between y1 and y2 using smoothed t
+      return y1 + (y2 - y1) * smoothT;
+    };
+
+    const interpolatedData: ContinuousDataPoint[] = [];
+
+    // Process each pair of consecutive points
+    for (let i = 0; i < sortedEntries.length; i++) {
+      const current = sortedEntries[i];
+      const currentMinutes = toMinutes(current.day, current.hour, current.minute);
+
+      // Determine direction based on next original point
+      let direction: "up" | "down" | undefined;
+      if (i < sortedEntries.length - 1) {
+        const next = sortedEntries[i + 1];
+        if (next.height > current.height) {
+          direction = "up"; // Próximo ponto é maior, maré está subindo
+        } else if (next.height < current.height) {
+          direction = "down"; // Próximo ponto é menor, maré está descendo
+        }
+      } else if (i > 0) {
+        // Last point: use previous point to determine direction
+        const prev = sortedEntries[i - 1];
+        if (current.height > prev.height) {
+          direction = "up"; // Ponto atual é maior que anterior, estava subindo
+        } else if (current.height < prev.height) {
+          direction = "down"; // Ponto atual é menor que anterior, estava descendo
+        }
+      }
+
+      // Add the current point (original from API)
+      const hourStr = current.hour.toString().padStart(2, "0");
+      const minuteStr = current.minute.toString().padStart(2, "0");
+      interpolatedData.push({
+        day: current.day,
+        hour: current.hour,
+        minute: current.minute,
+        timestamp: `${current.day}/${hourStr}:${minuteStr}`,
+        height: current.height,
+        sortKey: current.day * 10000 + current.hour * 100 + current.minute,
+        isOriginal: true, // Mark as original point
+        isDirectionChange: true, // All original points are direction changes
+        direction: direction,
+      });
+
+      // If there's a next point, interpolate between them
+      if (i < sortedEntries.length - 1) {
+        const next = sortedEntries[i + 1];
+        const nextMinutes = toMinutes(next.day, next.hour, next.minute);
+        const timeDiff = nextMinutes - currentMinutes;
+
+        // Only interpolate if the gap is more than 15 minutes
+        if (timeDiff > 15) {
+          // Find the next 15-minute rounded time (00, 15, 30, 45)
+          const getNextRoundedTime = (minutes: number) => {
+            const { day, hour, minute } = fromMinutes(minutes);
+            // Round up to next 15-minute interval (0, 15, 30, 45)
+            let roundedMinute: number;
+            if (minute === 0) {
+              roundedMinute = 15;
+            } else if (minute <= 15) {
+              roundedMinute = 15;
+            } else if (minute <= 30) {
+              roundedMinute = 30;
+            } else if (minute <= 45) {
+              roundedMinute = 45;
+            } else {
+              roundedMinute = 0;
+              const roundedHour = hour + 1;
+              if (roundedHour >= 24) {
+                return toMinutes(day + 1, 0, 0);
+              }
+              return toMinutes(day, roundedHour, 0);
+            }
+            return toMinutes(day, hour, roundedMinute);
+          };
+
+          // Start from the next rounded 15-minute interval
+          let interpolatedMinutes = getNextRoundedTime(currentMinutes);
+          
+          // Generate points every 15 minutes (00, 15, 30, 45) between current and next
+          while (interpolatedMinutes < nextMinutes) {
+            const { day, hour, minute } = fromMinutes(interpolatedMinutes);
+            
+            // Only add if minute is 0, 15, 30, or 45
+            if (minute === 0 || minute === 15 || minute === 30 || minute === 45) {
+              const interpolatedHeight = interpolate(
+                currentMinutes,
+                current.height,
+                nextMinutes,
+                next.height,
+                interpolatedMinutes
+              );
+
+              const hourStr = hour.toString().padStart(2, "0");
+              const minuteStr = minute.toString().padStart(2, "0");
+
+              interpolatedData.push({
+                day,
+                hour,
+                minute,
+                timestamp: `${day}/${hourStr}:${minuteStr}`,
+                height: interpolatedHeight,
+                sortKey: day * 10000 + hour * 100 + minute,
+              });
+            }
+
+            // Move to next 15-minute interval
+            interpolatedMinutes += 15;
+          }
+        }
+      }
+    }
+
+    // Sort by sortKey to ensure correct order
+    const sortedData = interpolatedData.sort((a, b) => a.sortKey - b.sortKey);
 
     return {
-      current: {
-        height: Math.max(0.2, Math.min(1.8, currentHeight)), // Clamp between realistic values
-        timestamp: now.toISOString(),
-        station: "São Francisco do Sul",
-      },
-      nextHigh: {
-        height: Math.max(0.2, Math.min(1.8, nextHighHeight)),
-        timestamp: nextHighTime.toISOString(),
-        station: "São Francisco do Sul",
-      },
-      nextLow: {
-        height: Math.max(0.2, Math.min(1.8, nextLowHeight)),
-        timestamp: nextLowTime.toISOString(),
-        station: "São Francisco do Sul",
-      },
+      ...tideTableData,
+      continuousData: sortedData,
     };
   } catch (error) {
     console.error("Error fetching tide data:", error);
-    throw new Error("Failed to fetch tide data");
+    throw new Error(`Failed to fetch tide data: ${error instanceof Error ? error.message : "Unknown error"}`);
   }
 }
 

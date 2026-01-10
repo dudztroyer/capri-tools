@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { TideTableResponse } from "@/services/tideService";
+import { TideDataWithInterpolation, ContinuousDataPoint } from "@/services/tideService";
 
 interface ChartDataPoint {
   day: number;
@@ -8,19 +8,7 @@ interface ChartDataPoint {
   avg: number;
 }
 
-interface ContinuousDataPoint {
-  day: number;
-  hour: number;
-  minute: number;
-  timestamp: string;
-  height: number;
-  sortKey: number;
-  isOriginal?: boolean; // Flag to identify original points from API
-  isDirectionChange?: boolean;
-  direction?: "up" | "down"; // "up" = maré subindo (mínimo), "down" = maré descendo (máximo)
-}
-
-export function useTideChartData(data?: TideTableResponse) {
+export function useTideChartData(data?: TideDataWithInterpolation) {
   // Transform data for chart - group by day and show min/max/avg tide heights
   const chartData = useMemo<ChartDataPoint[]>(() => {
     if (!data?.data || data.data.length === 0) return [];
@@ -50,161 +38,9 @@ export function useTideChartData(data?: TideTableResponse) {
       });
   }, [data]);
 
-  // Transform data for continuous chart - all hours of all days with 15min interpolation
+  // Use the continuous data directly from the service (already interpolated)
   const continuousChartData = useMemo<ContinuousDataPoint[]>(() => {
-    if (!data?.data || data.data.length === 0) return [];
-
-    // Sort entries by day, then by hour and minute
-    const sortedEntries = [...data.data].sort((a, b) => {
-      if (a.day !== b.day) return a.day - b.day;
-      if (a.hour !== b.hour) return a.hour - b.hour;
-      return a.minute - b.minute;
-    });
-
-    // Helper function to convert day/hour/minute to total minutes
-    const toMinutes = (day: number, hour: number, minute: number) => {
-      return day * 24 * 60 + hour * 60 + minute;
-    };
-
-    // Helper function to convert total minutes back to day/hour/minute
-    const fromMinutes = (totalMinutes: number) => {
-      const day = Math.floor(totalMinutes / (24 * 60));
-      const remainingMinutes = totalMinutes % (24 * 60);
-      const hour = Math.floor(remainingMinutes / 60);
-      const minute = remainingMinutes % 60;
-      return { day, hour, minute };
-    };
-
-    // Helper function for smooth cubic interpolation (smoothstep)
-    const smoothstep = (t: number): number => {
-      return t * t * (3 - 2 * t);
-    };
-
-    // Helper function for smooth interpolation using cubic easing
-    const interpolate = (x1: number, y1: number, x2: number, y2: number, x: number) => {
-      if (x2 === x1) return y1;
-      // Normalize x to [0, 1] range
-      const t = (x - x1) / (x2 - x1);
-      // Apply smoothstep function for smooth curve
-      const smoothT = smoothstep(t);
-      // Interpolate between y1 and y2 using smoothed t
-      return y1 + (y2 - y1) * smoothT;
-    };
-
-    const interpolatedData: ContinuousDataPoint[] = [];
-
-    // Process each pair of consecutive points
-    for (let i = 0; i < sortedEntries.length; i++) {
-      const current = sortedEntries[i];
-      const currentMinutes = toMinutes(current.day, current.hour, current.minute);
-
-      // Determine direction based on next original point
-      let direction: "up" | "down" | undefined;
-      if (i < sortedEntries.length - 1) {
-        const next = sortedEntries[i + 1];
-        if (next.height > current.height) {
-          direction = "up"; // Próximo ponto é maior, maré está subindo
-        } else if (next.height < current.height) {
-          direction = "down"; // Próximo ponto é menor, maré está descendo
-        }
-      } else if (i > 0) {
-        // Last point: use previous point to determine direction
-        const prev = sortedEntries[i - 1];
-        if (current.height > prev.height) {
-          direction = "up"; // Ponto atual é maior que anterior, estava subindo
-        } else if (current.height < prev.height) {
-          direction = "down"; // Ponto atual é menor que anterior, estava descendo
-        }
-      }
-
-      // Add the current point (original from API)
-      const hourStr = current.hour.toString().padStart(2, "0");
-      const minuteStr = current.minute.toString().padStart(2, "0");
-      interpolatedData.push({
-        day: current.day,
-        hour: current.hour,
-        minute: current.minute,
-        timestamp: `${current.day}/${hourStr}:${minuteStr}`,
-        height: current.height,
-        sortKey: current.day * 10000 + current.hour * 100 + current.minute,
-        isOriginal: true, // Mark as original point
-        isDirectionChange: true, // All original points are direction changes
-        direction: direction,
-      });
-
-      // If there's a next point, interpolate between them
-      if (i < sortedEntries.length - 1) {
-        const next = sortedEntries[i + 1];
-        const nextMinutes = toMinutes(next.day, next.hour, next.minute);
-        const timeDiff = nextMinutes - currentMinutes;
-
-        // Only interpolate if the gap is more than 15 minutes
-        if (timeDiff > 15) {
-          // Find the next 15-minute rounded time (00, 15, 30, 45)
-          const getNextRoundedTime = (minutes: number) => {
-            const { day, hour, minute } = fromMinutes(minutes);
-            // Round up to next 15-minute interval (0, 15, 30, 45)
-            let roundedMinute: number;
-            if (minute === 0) {
-              roundedMinute = 15;
-            } else if (minute <= 15) {
-              roundedMinute = 15;
-            } else if (minute <= 30) {
-              roundedMinute = 30;
-            } else if (minute <= 45) {
-              roundedMinute = 45;
-            } else {
-              roundedMinute = 0;
-              const roundedHour = hour + 1;
-              if (roundedHour >= 24) {
-                return toMinutes(day + 1, 0, 0);
-              }
-              return toMinutes(day, roundedHour, 0);
-            }
-            return toMinutes(day, hour, roundedMinute);
-          };
-
-          // Start from the next rounded 15-minute interval
-          let interpolatedMinutes = getNextRoundedTime(currentMinutes);
-          
-          // Generate points every 15 minutes (00, 15, 30, 45) between current and next
-          while (interpolatedMinutes < nextMinutes) {
-            const { day, hour, minute } = fromMinutes(interpolatedMinutes);
-            
-            // Only add if minute is 0, 15, 30, or 45
-            if (minute === 0 || minute === 15 || minute === 30 || minute === 45) {
-              const interpolatedHeight = interpolate(
-                currentMinutes,
-                current.height,
-                nextMinutes,
-                next.height,
-                interpolatedMinutes
-              );
-
-              const hourStr = hour.toString().padStart(2, "0");
-              const minuteStr = minute.toString().padStart(2, "0");
-
-              interpolatedData.push({
-                day,
-                hour,
-                minute,
-                timestamp: `${day}/${hourStr}:${minuteStr}`,
-                height: interpolatedHeight,
-                sortKey: day * 10000 + hour * 100 + minute,
-              });
-            }
-
-            // Move to next 15-minute interval
-            interpolatedMinutes += 15;
-          }
-        }
-      }
-    }
-
-    // Sort by sortKey to ensure correct order
-    const sortedData = interpolatedData.sort((a, b) => a.sortKey - b.sortKey);
-
-    return sortedData;
+    return data?.continuousData || [];
   }, [data]);
 
   return { chartData, continuousChartData };

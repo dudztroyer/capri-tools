@@ -1,7 +1,7 @@
 "use client";
 import React, { useState } from "react";
 import { Spin, Alert } from "antd";
-import { useTideTableData } from "@/hooks/useTideTableData";
+import { useTideDataForMonth } from "@/hooks/useTideDataForMonth";
 import { useTideChartData } from "@/hooks/useTideChartData";
 import { useCurrentDayRange } from "@/hooks/useCurrentDayRange";
 import MonthSelector from "@/components/tide-table/MonthSelector";
@@ -14,7 +14,7 @@ const HARBOR = "sc01";
 export default function TideTablePage() {
   const [selectedMonth, setSelectedMonth] = useState<number>(new Date().getMonth() + 1);
   const [brushRange, setBrushRange] = useState<[number, number] | null>(null);
-  const { data, isLoading, error } = useTideTableData(HARBOR, selectedMonth);
+  const { data, isLoading, error } = useTideDataForMonth(HARBOR, selectedMonth);
 
   // Check if selected month is current month
   const currentDate = new Date();
