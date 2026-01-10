@@ -14,6 +14,7 @@ import {
 import { useLanchaPassa } from "@/hooks/useLanchaPassa";
 import { useCurrentTide } from "@/hooks/useCurrentTide";
 import { useTideChartData } from "@/hooks/useTideChartData";
+import { useClientDate } from "@/hooks/useClientDate";
 import { useCurrentDayRange } from "@/hooks/useCurrentDayRange";
 import ContinuousTideChart from "@/components/tide-table/ContinuousTideChart";
 
@@ -22,16 +23,14 @@ const HARBOR = "sc01";
 
 export default function Home() {
   const router = useRouter();
-  const currentDate = new Date();
-  const currentMonth = currentDate.getMonth() + 1;
-  const currentDay = currentDate.getDate();
+  const { currentMonth, currentDay } = useClientDate();
   
   const { data: tideData, isLoading: isLoadingTide, error: tideError } = useCurrentTide(HARBOR);
   const { data: lanchaData, isLoading: isLoadingLancha, error: lanchaError } = useLanchaPassa();
   
   const [brushRange, setBrushRange] = useState<[number, number] | null>(null);
   
-  const { chartData, continuousChartData } = useTideChartData(tideData);
+  const { continuousChartData } = useTideChartData(tideData);
   
   const { initialBrushRange, getNowRange, getTodayRange, getTomorrowRange, getPreviousDayRange, getNextDayRange } = useCurrentDayRange(
     continuousChartData,
@@ -44,13 +43,13 @@ export default function Home() {
     if (!tideData?.continuousData || !lanchaData?.currentDirection) return null;
     
     const now = new Date();
-    const currentYear = new Date().getFullYear();
-    const currentMonth = new Date().getMonth() + 1;
+    const currentYear = now.getFullYear();
+    const currentMonthForCalc = currentMonth;
     
     // Find the next direction change by looking for points where direction changes
     const sortedPoints = [...tideData.continuousData].sort((a, b) => {
-      const dateA = new Date(currentYear, currentMonth - 1, a.day, a.hour, a.minute);
-      const dateB = new Date(currentYear, currentMonth - 1, b.day, b.hour, b.minute);
+      const dateA = new Date(currentYear, currentMonthForCalc - 1, a.day, a.hour, a.minute);
+      const dateB = new Date(currentYear, currentMonthForCalc - 1, b.day, b.hour, b.minute);
       return dateA.getTime() - dateB.getTime();
     });
     
@@ -58,7 +57,7 @@ export default function Home() {
     for (let i = 0; i < sortedPoints.length - 1; i++) {
       const point = sortedPoints[i];
       const nextPoint = sortedPoints[i + 1];
-      const pointDate = new Date(currentYear, currentMonth - 1, point.day, point.hour, point.minute);
+      const pointDate = new Date(currentYear, currentMonthForCalc - 1, point.day, point.hour, point.minute);
       
       if (pointDate > now && point.direction && nextPoint.direction && point.direction !== nextPoint.direction) {
         return pointDate;
@@ -66,7 +65,7 @@ export default function Home() {
     }
     
     return null;
-  }, [tideData, lanchaData]);
+  }, [tideData, lanchaData, currentMonth]);
 
   const formatDateTime = (date: Date | null): string => {
     if (!date) return "N/A";
@@ -275,18 +274,6 @@ export default function Home() {
                   type="info"
                   showIcon
                 />
-              )}
-              
-              {lanchaData?.currentWindowEnd && lanchaData.isPassingNow && (
-                <>
-                  <Divider />
-                  <div>
-                    <Title level={5}>Janela de Passagem Atual</Title>
-                    <Text>
-                      Válida até: <Text strong>{formatDateTime(new Date(lanchaData.currentWindowEnd))}</Text>
-                    </Text>
-                  </div>
-                </>
               )}
             </Space>
           </Card>

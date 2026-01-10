@@ -1,6 +1,7 @@
 import { UseQueryResult } from "@tanstack/react-query";
 import { TideDataWithInterpolation } from "@/services/tideService";
 import { useTideDataForMonth } from "./useTideDataForMonth";
+import { useClientDate } from "./useClientDate";
 
 /**
  * Hook to fetch tide data for the current month
@@ -11,8 +12,7 @@ import { useTideDataForMonth } from "./useTideDataForMonth";
 export function useCurrentTide(
   harbor: string = "sc01"
 ): UseQueryResult<TideDataWithInterpolation, Error> {
-  const currentDate = new Date();
-  const currentMonth = currentDate.getMonth() + 1;
+  const { currentMonth } = useClientDate();
   
   return useTideDataForMonth(harbor, currentMonth);
 }

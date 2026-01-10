@@ -3,7 +3,7 @@ import React from "react";
 import Image from "next/image";
 import { Layout } from "antd";
 import MenuContent from "./MenuContent";
-import logo from "@/assets/logo.png";
+import logo from "@/assets/logo horizontal.png";
 import { AppStyles } from "@/types/styles";
 
 const { Sider } = Layout;
@@ -26,9 +26,9 @@ export default function Sidebar({ styles }: SidebarProps) {
           <Image
             src={logo}
             alt="Logo"
-            width={64}
-            height={64}
-            style={{ display: "block", margin: "0 auto" }}
+            width={180}
+            height={48}
+            style={{ display: "block", margin: "0 auto", objectFit: "contain" }}
           />
         </div>
         <MenuContent styles={styles} />

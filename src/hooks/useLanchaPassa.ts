@@ -1,5 +1,8 @@
 import { useQuery, UseQueryResult } from "@tanstack/react-query";
-import { getTideDataWithInterpolation, TideDataWithInterpolation, ContinuousDataPoint } from "@/services/tideService";
+import { useMemo } from "react";
+import { TideDataWithInterpolation, ContinuousDataPoint, getTideDataWithInterpolation } from "@/services/tideService";
+import { useTideDataForMonth } from "./useTideDataForMonth";
+import { useClientDate } from "./useClientDate";
 
 export interface PassagemWindow {
   start: Date;
@@ -380,38 +383,50 @@ function calculateLanchaPassaDataFromPoints(
 }
 
 /**
- * Fetches and calculates lancha passa data using granular interpolated data
+ * Hook to get lancha passa status and windows
+ * Uses React Query hooks to fetch tide data with caching
  */
-async function fetchLanchaPassaData(): Promise<LanchaPassaData> {
-  const now = new Date();
-  const currentMonth = now.getMonth() + 1;
-  const currentYear = now.getFullYear();
+export function useLanchaPassa(): UseQueryResult<LanchaPassaData, Error> {
   const harbor = "sc01";
+  const { now, currentMonth, currentYear } = useClientDate();
 
-  // Get current month data with interpolation
-  const currentMonthData = await getTideDataWithInterpolation(harbor, currentMonth);
+  // Get current month data with interpolation using React Query
+  const { data: currentMonthData, isLoading: isLoadingCurrent, error: errorCurrent } = useTideDataForMonth(harbor, currentMonth);
 
-  // If we need data beyond current month (for 7 days ahead)
-  const allPoints: ContinuousDataPointWithMonth[] = [];
-  
-  // Add current month's continuous data
-  currentMonthData.continuousData.forEach(point => {
-    allPoints.push({
-      ...point,
-      month: currentMonthData.month,
-      year: currentMonthData.year,
-    });
-  });
-  
+  // Determine if we need next month data
   const daysUntilMonthEnd = new Date(currentYear, currentMonth, 0).getDate() - now.getDate();
-  
-  if (daysUntilMonthEnd < 7) {
-    // Fetch next month data
-    const nextMonth = currentMonth === 12 ? 1 : currentMonth + 1;
-    const nextMonthYear = currentMonth === 12 ? currentYear + 1 : currentYear;
-    try {
-      const nextMonthData = await getTideDataWithInterpolation(harbor, nextMonth);
-      // Add next month's continuous data
+  const needsNextMonth = daysUntilMonthEnd < 7;
+  const nextMonth = currentMonth === 12 ? 1 : currentMonth + 1;
+  const nextMonthYear = currentMonth === 12 ? currentYear + 1 : currentYear;
+
+  // Get next month data conditionally using React Query
+  const { data: nextMonthData, isLoading: isLoadingNext, error: errorNext } = useQuery<TideDataWithInterpolation, Error>({
+    queryKey: ["tideData", harbor, nextMonth],
+    queryFn: () => getTideDataWithInterpolation(harbor, nextMonth),
+    staleTime: Infinity,
+    gcTime: 24 * 60 * 60 * 1000,
+    enabled: needsNextMonth && nextMonth >= 1 && nextMonth <= 12,
+  });
+
+  // Compute lancha passa data from the tide data queries using useMemo
+  // This ensures the calculation happens when the dependent data changes
+  const lanchaPassaData = useMemo<LanchaPassaData | undefined>(() => {
+    if (!currentMonthData) return undefined;
+    if (needsNextMonth && !nextMonthData) return undefined;
+
+    const allPoints: ContinuousDataPointWithMonth[] = [];
+    
+    // Add current month's continuous data
+    currentMonthData.continuousData.forEach(point => {
+      allPoints.push({
+        ...point,
+        month: currentMonthData.month,
+        year: currentMonthData.year,
+      });
+    });
+    
+    // Add next month's continuous data if available
+    if (needsNextMonth && nextMonthData) {
       nextMonthData.continuousData.forEach(point => {
         allPoints.push({
           ...point,
@@ -419,24 +434,59 @@ async function fetchLanchaPassaData(): Promise<LanchaPassaData> {
           year: nextMonthData.year || nextMonthYear,
         });
       });
-    } catch (error) {
-      console.error("Error fetching next month data:", error);
     }
-  }
 
-  // Calculate with all interpolated points
-  return calculateLanchaPassaDataFromPoints(allPoints);
-}
+    // Calculate with all interpolated points
+    return calculateLanchaPassaDataFromPoints(allPoints);
+  }, [currentMonthData, nextMonthData, needsNextMonth, nextMonthYear]);
 
-/**
- * Hook to get lancha passa status and windows
- */
-export function useLanchaPassa(): UseQueryResult<LanchaPassaData, Error> {
+  // Determine loading state
+  const isLoading = isLoadingCurrent || (needsNextMonth && isLoadingNext);
+
+  // Use useQuery to provide caching and refetch behavior
+  // The query depends on the underlying tide data queries, so it will automatically
+  // update when those queries update (thanks to React Query's cache invalidation)
   return useQuery<LanchaPassaData, Error>({
-    queryKey: ["lanchaPassa"],
-    queryFn: fetchLanchaPassaData,
-    refetchInterval: 5 * 60 * 1000, // Refetch every 5 minutes
+    queryKey: ["lanchaPassa", harbor, currentMonth, nextMonth, needsNextMonth],
+    queryFn: async () => {
+      // This function will be called when the query needs to refetch
+      // It will use the cached data from useTideDataForMonth queries
+      if (!currentMonthData) {
+        throw new Error("Current month tide data is not available");
+      }
+      if (needsNextMonth && !nextMonthData) {
+        throw new Error("Next month tide data is not available");
+      }
+
+      const allPoints: ContinuousDataPointWithMonth[] = [];
+      
+      // Add current month's continuous data
+      currentMonthData.continuousData.forEach(point => {
+        allPoints.push({
+          ...point,
+          month: currentMonthData.month,
+          year: currentMonthData.year,
+        });
+      });
+      
+      // Add next month's continuous data if available
+      if (needsNextMonth && nextMonthData) {
+        nextMonthData.continuousData.forEach(point => {
+          allPoints.push({
+            ...point,
+            month: nextMonthData.month,
+            year: nextMonthData.year || nextMonthYear,
+          });
+        });
+      }
+
+      return calculateLanchaPassaDataFromPoints(allPoints);
+    },
+    enabled: !isLoading && !!currentMonthData && (!needsNextMonth || !!nextMonthData),
     staleTime: 2 * 60 * 1000, // Consider stale after 2 minutes
+    refetchInterval: 5 * 60 * 1000, // Refetch every 5 minutes
+    placeholderData: lanchaPassaData, // Use computed data while loading
+    initialData: lanchaPassaData, // Use computed data as initial data
   });
 }
 

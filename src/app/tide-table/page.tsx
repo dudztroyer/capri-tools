@@ -4,6 +4,7 @@ import { Spin, Alert } from "antd";
 import { useTideDataForMonth } from "@/hooks/useTideDataForMonth";
 import { useTideChartData } from "@/hooks/useTideChartData";
 import { useCurrentDayRange } from "@/hooks/useCurrentDayRange";
+import { useClientDate } from "@/hooks/useClientDate";
 import MonthSelector from "@/components/tide-table/MonthSelector";
 import MinMaxChart from "@/components/tide-table/MinMaxChart";
 import ContinuousTideChart from "@/components/tide-table/ContinuousTideChart";
@@ -12,14 +13,13 @@ import TideStatistics from "@/components/tide-table/TideStatistics";
 const HARBOR = "sc01";
 
 export default function TideTablePage() {
-  const [selectedMonth, setSelectedMonth] = useState<number>(new Date().getMonth() + 1);
+  const { currentMonth: defaultMonth, currentDay } = useClientDate();
+  const [selectedMonth, setSelectedMonth] = useState<number>(defaultMonth);
   const [brushRange, setBrushRange] = useState<[number, number] | null>(null);
   const { data, isLoading, error } = useTideDataForMonth(HARBOR, selectedMonth);
 
   // Check if selected month is current month
-  const currentDate = new Date();
-  const currentMonth = currentDate.getMonth() + 1;
-  const currentDay = currentDate.getDate();
+  const currentMonth = defaultMonth;
   const isCurrentMonth = selectedMonth === currentMonth;
 
   // Transform data using custom hook

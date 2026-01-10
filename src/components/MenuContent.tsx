@@ -1,13 +1,9 @@
 "use client";
 import React from "react";
-import { Divider, Menu, Grid, Avatar, Space, Typography, Tag, Spin } from "antd";
+import { Menu, Typography, Tag, Spin } from "antd";
 import {
   AppstoreAddOutlined,
   HomeOutlined,
-  LogoutOutlined,
-  SettingOutlined,
-  UserOutlined,
-  WalletOutlined,
   LineChartOutlined,
   CheckCircleOutlined,
   ClockCircleOutlined,
@@ -16,7 +12,6 @@ import { useRouter, usePathname } from "next/navigation";
 import { AppStyles } from "@/types/styles";
 import { useLanchaPassa } from "@/hooks/useLanchaPassa";
 
-const { useBreakpoint } = Grid;
 const { Text } = Typography;
 
 interface MenuContentProps {
@@ -24,7 +19,6 @@ interface MenuContentProps {
 }
 
 export default function MenuContent({ styles }: MenuContentProps) {
-  const screens = useBreakpoint();
   const router = useRouter();
   const pathname = usePathname();
   const { data: lanchaPassaData, isLoading: isLoadingLanchaPassa } = useLanchaPassa();

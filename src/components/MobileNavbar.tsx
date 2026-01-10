@@ -2,7 +2,9 @@
 import React, { useState } from "react";
 import { Button, Drawer } from "antd";
 import { MenuOutlined } from "@ant-design/icons";
+import Image from "next/image";
 import MenuContent from "./MenuContent";
+import logo from "@/assets/logo horizontal.png";
 import { AppStyles } from "@/types/styles";
 
 interface MobileNavbarProps {
@@ -21,7 +23,13 @@ export default function MobileNavbar({ styles }: MobileNavbarProps) {
   return (
     <div style={styles.navbarMobile}>
       <div style={styles.navbarContainer}>
-        Logo
+        <Image
+          src={logo}
+          alt="Logo"
+          height={32}
+          width={120}
+          style={{ objectFit: "contain" }}
+        />
         <Button type="text" icon={<MenuOutlined />} onClick={showDrawer} />
         <Drawer
           title="Menu"

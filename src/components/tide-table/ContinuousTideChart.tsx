@@ -40,6 +40,159 @@ interface ContinuousTideChartProps {
     onGoToNextDay: (baseDay: number) => void;
 }
 
+// Custom tick renderer for XAxis
+interface CustomTickProps {
+    x?: number;
+    y?: number;
+    payload?: { value: string };
+}
+
+function CustomTick(props: CustomTickProps) {
+    const { x = 0, y = 0, payload } = props;
+    if (!payload) return null;
+
+    return (
+        <g transform={`translate(${x},${y})`}>
+            <text
+                x={0}
+                y={0}
+                dy={16}
+                textAnchor="end"
+                fill="#666"
+                fontSize={11}
+                transform="rotate(-45)"
+            >
+                {payload.value}
+            </text>
+        </g>
+    );
+}
+
+// Dot renderer for direction changes
+interface DirectionChangeDotProps {
+    payload?: ContinuousDataPoint;
+    cx?: number;
+    cy?: number;
+}
+
+function DirectionChangeDot(props: DirectionChangeDotProps) {
+    const { payload, cx, cy } = props;
+    if (payload?.isDirectionChange && cx !== undefined && cy !== undefined) {
+        const iconSize = 16;
+        const color = payload.direction === "up" ? "#52c41a" : "#ff4d4f";
+        const symbol = payload.direction === "up" ? "↑" : "↓";
+        return (
+            <g>
+                <text
+                    x={cx}
+                    y={cy - 10}
+                    fill={color}
+                    fontSize={iconSize}
+                    fontWeight="bold"
+                    textAnchor="middle"
+                >
+                    {symbol}
+                </text>
+            </g>
+        );
+    }
+    return null;
+}
+
+// Reference line for current timestamp
+interface CurrentTimestampReferenceLineProps {
+    currentTimestamp: string | null;
+}
+
+function CurrentTimestampReferenceLine({ currentTimestamp }: CurrentTimestampReferenceLineProps) {
+    if (!currentTimestamp) return null;
+
+    return (
+        <ReferenceLine
+            x={currentTimestamp}
+            stroke="#faad14"
+            strokeWidth={2}
+            strokeDasharray="5 5"
+            label={{
+                value: "Agora",
+                position: "top",
+                fill: "#faad14",
+                fontSize: 12,
+                fontWeight: "bold",
+            }}
+        />
+    );
+}
+
+// Reference lines for direction changes
+interface DirectionChangeReferenceLinesProps {
+    directionChangePoints: ContinuousDataPoint[];
+}
+
+function DirectionChangeReferenceLines({ directionChangePoints }: DirectionChangeReferenceLinesProps) {
+    return (
+        <>
+            {directionChangePoints.map((point, index) => (
+                <ReferenceLine
+                    key={`ref-${index}`}
+                    x={point.timestamp}
+                    stroke={point.direction === "up" ? "#52c41a" : "#ff4d4f"}
+                    strokeWidth={1}
+                    strokeDasharray="3 3"
+                />
+            ))}
+        </>
+    );
+}
+
+// Brush content with ComposedChart
+interface BrushContentProps {
+    brushDataWithHighlight: Array<ContinuousDataPoint & { currentDayHeight?: number | null; highlightMax?: number | null }>;
+    currentDay: number | null;
+    isCurrentMonth: boolean;
+    currentTimestamp: string | null;
+}
+
+function BrushContent({ brushDataWithHighlight, currentDay, isCurrentMonth, currentTimestamp }: BrushContentProps) {
+    return (
+        <ComposedChart data={brushDataWithHighlight}>
+            {/* Background highlight area for current day */}
+            {currentDay !== null && isCurrentMonth && (
+                <Area
+                    dataKey="highlightMax"
+                    fill="#faad14"
+                    fillOpacity={0.15}
+                    stroke="none"
+                />
+            )}
+            {/* Main tide data area */}
+            <Area 
+                dataKey="height" 
+                fill="#8884d8" 
+                fillOpacity={0.3}
+                stroke="#8884d8"
+                strokeWidth={1}
+            />
+            {/* Reference line for current timestamp */}
+            {currentTimestamp && (
+                <ReferenceLine
+                    x={currentTimestamp}
+                    stroke="#faad14"
+                    strokeWidth={2}
+                    strokeDasharray="5 5"
+                    label={{
+                        value: "Agora",
+                        position: "top",
+                        fill: "#faad14",
+                        fontSize: 12,
+                        fontWeight: "bold",
+                    }}
+                />
+            )}
+        </ComposedChart>
+    );
+}
+
 export default function ContinuousTideChart({
     data,
     isCurrentMonth,
@@ -84,11 +237,6 @@ export default function ContinuousTideChart({
         return data.filter((point) => point.isDirectionChange);
     }, [data]);
 
-    // Create a set of direction change timestamps for quick lookup
-    const directionChangeTimestamps = useMemo(() => {
-        return new Set(directionChangePoints.map((point) => point.timestamp));
-    }, [directionChangePoints]);
-
     // Calculate current timestamp for reference line
     const currentTimestamp = useMemo(() => {
         if (!isCurrentMonth || data.length === 0) return null;
@@ -123,8 +271,6 @@ export default function ContinuousTideChart({
     const brushDataWithHighlight = useMemo(() => {
         if (currentDay === null || !isCurrentMonth) return data;
         
-        // Create a separate data array for current day highlight
-        const currentDayData = data.filter((point) => point.day === currentDay);
         const maxHeight = Math.max(...data.map(p => p.height), 0);
         
         return data.map((point) => ({
@@ -133,28 +279,6 @@ export default function ContinuousTideChart({
             highlightMax: point.day === currentDay ? maxHeight * 1.1 : null,
         }));
     }, [data, currentDay, isCurrentMonth]);
-
-    // Custom tick renderer for XAxis
-    const customTick = (props: { x?: number; y?: number; payload?: { value: string } }) => {
-        const { x = 0, y = 0, payload } = props;
-        if (!payload) return null;
-
-        return (
-            <g transform={`translate(${x},${y})`}>
-                <text
-                    x={0}
-                    y={0}
-                    dy={16}
-                    textAnchor="end"
-                    fill="#666"
-                    fontSize={11}
-                    transform="rotate(-45)"
-                >
-                    {payload.value}
-                </text>
-            </g>
-        );
-    };
 
     if (data.length === 0) return null;
 
@@ -217,17 +341,9 @@ export default function ContinuousTideChart({
                 borderRadius: "8px",
             }}
         >
-            <div style={{ overflowX: "auto", width: "100%", overflowY: "hidden" }}>
-                <ResponsiveContainer width="100%" height={400}>
-                    <LineChart
-                        data={data}
-                        margin={{
-                            top: 5,
-                            right: 30,
-                            left: 20,
-                            bottom: 80,
-                        }}
-                    >
+            <div style={{ overflowX: "auto", width: "100%", overflowY: "hidden", height: "300px" }}>
+                <ResponsiveContainer width="100%" height="100%">
+                    <LineChart data={data}>
                         <CartesianGrid strokeDasharray="3 3" />
                         <XAxis
                             dataKey="timestamp"
@@ -235,7 +351,7 @@ export default function ContinuousTideChart({
                             textAnchor="end"
                             height={100}
                             // interval={Math.floor(data.length)}
-                            tick={customTick}
+                            tick={CustomTick}
                             label={{ value: "Dia/Hora", position: "insideBottom" }}
                         />
                         <YAxis
@@ -251,57 +367,13 @@ export default function ContinuousTideChart({
                             stroke="#1890ff"
                             strokeWidth={2}
                             name="Altura da Maré (m)"
-                            dot={(props: { payload?: ContinuousDataPoint; cx?: number; cy?: number }) => {
-                                const { payload, cx, cy } = props;
-                                if (payload?.isDirectionChange && cx !== undefined && cy !== undefined) {
-                                    const iconSize = 16;
-                                    const color = payload.direction === "up" ? "#52c41a" : "#ff4d4f";
-                                    const symbol = payload.direction === "up" ? "↑" : "↓";
-                                    return (
-                                        <g>
-                                            <text
-                                                x={cx}
-                                                y={cy - 10}
-                                                fill={color}
-                                                fontSize={iconSize}
-                                                fontWeight="bold"
-                                                textAnchor="middle"
-                                            >
-                                                {symbol}
-                                            </text>
-                                        </g>
-                                    );
-                                }
-                                return null;
-                            }}
+                            dot={DirectionChangeDot}
                             activeDot={{ r: 6 }}
                         />
                         {/* Add reference line for current timestamp */}
-                        {currentTimestamp && (
-                            <ReferenceLine
-                                x={currentTimestamp}
-                                stroke="#faad14"
-                                strokeWidth={2}
-                                strokeDasharray="5 5"
-                                label={{
-                                    value: "Agora",
-                                    position: "top",
-                                    fill: "#faad14",
-                                    fontSize: 12,
-                                    fontWeight: "bold",
-                                }}
-                            />
-                        )}
+                        <CurrentTimestampReferenceLine currentTimestamp={currentTimestamp} />
                         {/* Add reference lines for direction changes */}
-                        {directionChangePoints.map((point, index) => (
-                            <ReferenceLine
-                                key={`ref-${index}`}
-                                x={point.timestamp}
-                                stroke={point.direction === "up" ? "#52c41a" : "#ff4d4f"}
-                                strokeWidth={1}
-                                strokeDasharray="3 3"
-                            />
-                        ))}
+                        <DirectionChangeReferenceLines directionChangePoints={directionChangePoints} />
                         <Brush
                             dataKey="timestamp"
                             stroke="#8884d8"
@@ -338,42 +410,12 @@ export default function ContinuousTideChart({
                                 }
                             }}
                         >
-                            <ComposedChart data={brushDataWithHighlight}>
-                                {/* Background highlight area for current day */}
-                                {currentDay !== null && isCurrentMonth && (
-                                    <Area
-                                        dataKey="highlightMax"
-                                        fill="#faad14"
-                                        fillOpacity={0.15}
-                                        stroke="none"
-                                    />
-                                )}
-                                {/* Main tide data area */}
-                                <Area 
-                                    dataKey="height" 
-                                    fill="#8884d8" 
-                                    fillOpacity={0.3}
-                                    stroke="#8884d8"
-                                    strokeWidth={1}
-                                />
-                                {/* Reference lines at start and end of current day */}
-                        {/* Add reference line for current timestamp */}
-                        {currentTimestamp && (
-                            <ReferenceLine
-                                x={currentTimestamp}
-                                stroke="#faad14"
-                                strokeWidth={2}
-                                strokeDasharray="5 5"
-                                label={{
-                                    value: "Agora",
-                                    position: "top",
-                                    fill: "#faad14",
-                                    fontSize: 12,
-                                    fontWeight: "bold",
-                                }}
+                            <BrushContent
+                                brushDataWithHighlight={brushDataWithHighlight}
+                                currentDay={currentDay}
+                                isCurrentMonth={isCurrentMonth}
+                                currentTimestamp={currentTimestamp}
                             />
-                        )}
-                            </ComposedChart>
                         </Brush>
                     </LineChart>
                 </ResponsiveContainer>
