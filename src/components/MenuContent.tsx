@@ -8,6 +8,7 @@ import {
   SettingOutlined,
   UserOutlined,
   WalletOutlined,
+  LineChartOutlined,
 } from "@ant-design/icons";
 import { useRouter, usePathname } from "next/navigation";
 import { AppStyles } from "@/types/styles";
@@ -34,6 +35,11 @@ export default function MenuContent({ styles }: MenuContentProps) {
       key: "/a-lancha-passa",
       icon: <AppstoreAddOutlined />,
       label: "A lancha passa?",
+    },
+    {
+      key: "/tide-table",
+      icon: <LineChartOutlined />,
+      label: "Tábua de Maré Mensal",
     },
   ];
 

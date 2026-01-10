@@ -72,7 +72,7 @@ export default function ALanchaPassa() {
             borderRadius: "8px",
           }}
         >
-          <Space direction="vertical" size="large" style={{ width: "100%" }}>
+          <Space orientation="vertical" size="large" style={{ width: "100%" }}>
             <div style={{ textAlign: "center", padding: "24px 0" }}>
               <Statistic
                 title="Nível da Maré Atual"
@@ -118,7 +118,7 @@ export default function ALanchaPassa() {
 
             <div style={{ marginTop: "24px" }}>
               <Title level={5}>Requisitos para Passagem</Title>
-              <Space direction="vertical" size="small" style={{ width: "100%" }}>
+              <Space orientation="vertical" size="small" style={{ width: "100%" }}>
                 <Text>
                   <Text strong>Altura mínima:</Text> 0.4m
                 </Text>
@@ -145,7 +145,7 @@ export default function ALanchaPassa() {
             borderRadius: "8px",
           }}
         >
-          <Space direction="vertical" size="large" style={{ width: "100%" }}>
+          <Space orientation="vertical" size="large" style={{ width: "100%" }}>
             {data?.nextHigh && (
               <Card
                 size="small"
