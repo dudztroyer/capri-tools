@@ -57,16 +57,16 @@ export default function TideTablePage() {
   };
 
   // Go to previous day (noon) button handler
-  const goToPreviousDay = () => {
-    const previousDayRange = getPreviousDayRange();
+  const goToPreviousDay = (baseDay: number) => {
+    const previousDayRange = getPreviousDayRange(baseDay);
     if (previousDayRange) {
       setBrushRange(previousDayRange);
     }
   };
 
   // Go to next day (noon) button handler
-  const goToNextDay = () => {
-    const nextDayRange = getNextDayRange();
+  const goToNextDay = (baseDay: number) => {
+    const nextDayRange = getNextDayRange(baseDay);
     if (nextDayRange) {
       setBrushRange(nextDayRange);
     }

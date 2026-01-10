@@ -168,19 +168,17 @@ export function useCurrentDayRange(
     return [startIndex, endIndex];
   };
 
-  // Go to previous day at noon function - show 13h before and 13h after 12:00 of previous day
-  const getPreviousDayRange = (): [number, number] | null => {
-    if (!isCurrentMonth || continuousChartData.length === 0) return null;
+  // Helper function to get range for a specific day at noon
+  const getDayRange = (targetDay: number): [number, number] | null => {
+    if (continuousChartData.length === 0) return null;
     
-    const previousDay = currentDay - 1;
-    
-    // Find point closest to 12:00 (noon) of previous day
+    // Find point closest to 12:00 (noon) of target day
     let closestIndex = -1;
     let minDiff = Infinity;
     
     for (let i = 0; i < continuousChartData.length; i++) {
       const point = continuousChartData[i];
-      if (point.day === previousDay) {
+      if (point.day === targetDay) {
         // Calculate time difference from 12:00
         const pointMinutes = point.hour * 60 + point.minute;
         const noonMinutes = 12 * 60; // 12:00 = 720 minutes
@@ -205,41 +203,20 @@ export function useCurrentDayRange(
     return [startIndex, endIndex];
   };
 
+  // Go to previous day at noon function - show 13h before and 13h after 12:00 of previous day
+  const getPreviousDayRange = (baseDay: number): [number, number] | null => {
+    if (continuousChartData.length === 0) return null;
+    
+    const previousDay = baseDay - 1;
+    return getDayRange(previousDay);
+  };
+
   // Go to next day at noon function - show 13h before and 13h after 12:00 of next day
-  const getNextDayRange = (): [number, number] | null => {
-    if (!isCurrentMonth || continuousChartData.length === 0) return null;
+  const getNextDayRange = (baseDay: number): [number, number] | null => {
+    if (continuousChartData.length === 0) return null;
     
-    const nextDay = currentDay + 1;
-    
-    // Find point closest to 12:00 (noon) of next day
-    let closestIndex = -1;
-    let minDiff = Infinity;
-    
-    for (let i = 0; i < continuousChartData.length; i++) {
-      const point = continuousChartData[i];
-      if (point.day === nextDay) {
-        // Calculate time difference from 12:00
-        const pointMinutes = point.hour * 60 + point.minute;
-        const noonMinutes = 12 * 60; // 12:00 = 720 minutes
-        const diff = Math.abs(pointMinutes - noonMinutes);
-        
-        if (diff < minDiff) {
-          minDiff = diff;
-          closestIndex = i;
-        }
-      }
-    }
-    
-    if (closestIndex === -1) return null;
-    
-    // Calculate 13 hours before and after (13 * 60 / 15 = 52 points at 15min intervals)
-    const pointsPerHour = 4; // 15 minutes = 4 points per hour
-    const pointsRange = 13 * pointsPerHour; // 52 points = 13 hours
-    
-    const startIndex = Math.max(0, closestIndex - pointsRange);
-    const endIndex = Math.min(continuousChartData.length - 1, closestIndex + pointsRange);
-    
-    return [startIndex, endIndex];
+    const nextDay = baseDay + 1;
+    return getDayRange(nextDay);
   };
 
   return { initialBrushRange, getNowRange, getTodayRange, getTomorrowRange, getPreviousDayRange, getNextDayRange };
