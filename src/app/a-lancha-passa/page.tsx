@@ -12,7 +12,6 @@ export default function ALanchaPassa() {
   const currentHeight = data?.current?.height ?? 0;
   const canPass = currentHeight >= 0.4 && currentHeight <= 1.4;
   const isTooLow = currentHeight < 0.4;
-  const isTooHigh = currentHeight > 1.4;
 
   const formatTime = (timestamp: string) => {
     return new Date(timestamp).toLocaleTimeString("pt-BR", {

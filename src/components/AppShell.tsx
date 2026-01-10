@@ -1,14 +1,14 @@
 "use client";
 import React from "react";
-import { Layout, theme, Grid, Typography } from "antd";
+import { Layout, theme, Grid } from "antd";
 import Sidebar from "./Sidebar";
 import MobileNavbar from "./MobileNavbar";
 import AppHeader from "./AppHeader";
+import { AppStyles } from "@/types/styles";
 
 const { Content } = Layout;
 const { useToken } = theme;
 const { useBreakpoint } = Grid;
-const { Text } = Typography;
 
 interface AppShellProps {
   children: React.ReactNode;
@@ -20,7 +20,7 @@ export default function AppShell({ children }: AppShellProps) {
 
   const shouldDisplayOnMobile = screens.lg || screens.xs;
 
-  const styles = {
+  const styles: AppStyles = {
     container: {
       margin: "0 auto",
       maxWidth: token.screenXL,

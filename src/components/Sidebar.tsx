@@ -4,11 +4,12 @@ import Image from "next/image";
 import { Layout } from "antd";
 import MenuContent from "./MenuContent";
 import logo from "@/assets/logo.png";
+import { AppStyles } from "@/types/styles";
 
 const { Sider } = Layout;
 
 interface SidebarProps {
-  styles: any;
+  styles: AppStyles;
 }
 
 export default function Sidebar({ styles }: SidebarProps) {

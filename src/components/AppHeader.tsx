@@ -3,9 +3,10 @@ import React from "react";
 import { Space } from "antd";
 import PageBreadcrumb from "./PageBreadcrumb";
 import PageTitle from "./PageTitle";
+import { AppStyles } from "@/types/styles";
 
 interface AppHeaderProps {
-  styles: any;
+  styles: AppStyles;
 }
 
 export default function AppHeader({ styles }: AppHeaderProps) {

@@ -3,9 +3,10 @@ import React, { useState } from "react";
 import { Button, Drawer } from "antd";
 import { MenuOutlined } from "@ant-design/icons";
 import MenuContent from "./MenuContent";
+import { AppStyles } from "@/types/styles";
 
 interface MobileNavbarProps {
-  styles: any;
+  styles: AppStyles;
 }
 
 export default function MobileNavbar({ styles }: MobileNavbarProps) {

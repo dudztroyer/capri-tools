@@ -1,7 +1,6 @@
 "use client";
 import React from "react";
-import { Divider, Menu } from "antd";
-import { Grid } from "antd";
+import { Divider, Menu, Grid, Avatar, Space, Typography } from "antd";
 import {
   AppstoreAddOutlined,
   HomeOutlined,
@@ -11,13 +10,13 @@ import {
   WalletOutlined,
 } from "@ant-design/icons";
 import { useRouter, usePathname } from "next/navigation";
-import { Avatar, Space, Typography } from "antd";
+import { AppStyles } from "@/types/styles";
 
 const { useBreakpoint } = Grid;
 const { Text } = Typography;
 
 interface MenuContentProps {
-  styles: any;
+  styles: AppStyles;
 }
 
 export default function MenuContent({ styles }: MenuContentProps) {
