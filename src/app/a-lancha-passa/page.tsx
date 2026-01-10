@@ -1,22 +1,18 @@
 "use client";
 import React from "react";
 import { Card, Row, Col, Spin, Typography, Statistic, Tag, Space, Alert } from "antd";
-import { useQuery } from "@tanstack/react-query";
-import { fetchTideData } from "@/services/tideService";
+import { useTideData } from "@/hooks/useTideData";
 import { CheckCircleOutlined, CloseCircleOutlined, RiseOutlined, FallOutlined } from "@ant-design/icons";
 
 const { Title, Text } = Typography;
 
 export default function ALanchaPassa() {
-  const { data, isLoading, error } = useQuery({
-    queryKey: ["tideData"],
-    queryFn: fetchTideData,
-    refetchInterval: 5 * 60 * 1000, // Refetch every 5 minutes
-  });
+  const { data, isLoading, error } = useTideData();
 
-  const canPass = data?.current.height >= 0.4 && data?.current.height <= 1.4;
-  const isTooLow = data?.current.height < 0.4;
-  const isTooHigh = data?.current.height > 1.4;
+  const currentHeight = data?.current?.height ?? 0;
+  const canPass = currentHeight >= 0.4 && currentHeight <= 1.4;
+  const isTooLow = currentHeight < 0.4;
+  const isTooHigh = currentHeight > 1.4;
 
   const formatTime = (timestamp: string) => {
     return new Date(timestamp).toLocaleTimeString("pt-BR", {
@@ -90,10 +86,14 @@ export default function ALanchaPassa() {
                 }}
               />
               <Text type="secondary" style={{ display: "block", marginTop: "8px" }}>
-                {data?.current.station}
+                {data?.current?.station}
               </Text>
               <Text type="secondary" style={{ display: "block", marginTop: "4px" }}>
-                {formatDate(data?.current.timestamp)} às {formatTime(data?.current.timestamp)}
+                {data?.current?.timestamp && (
+                  <>
+                    {formatDate(data.current.timestamp)} às {formatTime(data.current.timestamp)}
+                  </>
+                )}
               </Text>
             </div>
 

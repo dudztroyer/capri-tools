@@ -1,0 +1,74 @@
+# Cursor Rules for Capri Tools
+
+## Linting and Code Quality
+
+- Periodically check for linting errors using `read_lints` tool, especially:
+  - After making code changes
+  - Before completing a task
+  - When working on multiple files
+  - When TypeScript errors are suspected
+
+- Always fix linting errors before marking tasks as complete
+- Run lint checks on files you've modified or are about to modify
+- Pay attention to TypeScript type errors and fix them immediately
+
+## Code Style
+
+- Use TypeScript with strict type checking
+- Prefer explicit type annotations for function parameters and return types
+- Use "use client" directive for ALL client components in Next.js App Router (pages, components that use hooks, etc.)
+- Follow existing code patterns and conventions
+- Componentize reusable logic into hooks and components
+
+## Project Structure
+
+- **Components**: Place reusable UI components in `/src/components/`
+  - Examples: Sidebar, AppHeader, PageBreadcrumb, PageTitle, etc.
+  - All components should be properly typed with TypeScript interfaces
+
+- **Hooks**: Place custom React hooks in `/src/hooks/`
+  - Use TanStack Query hooks for data fetching
+  - Export typed hooks with explicit return types (e.g., `UseQueryResult<T, Error>`)
+  - Example: `useTideData` hook for fetching tide data
+
+- **Services**: Place API/data fetching logic in `/src/services/`
+  - Export interfaces for request/response types
+  - Use async/await for API calls
+  - Handle errors appropriately
+
+- **Config**: Place static configuration in `/src/config/`
+  - Route configuration is static in `config/routes.ts`
+  - All routes must be defined in `routeConfig` with path, title, and breadcrumb
+  - Use `getRouteConfig(pathname)` helper to retrieve route config
+
+- **Pages**: Place Next.js App Router pages in `/src/app/[route]/page.tsx`
+  - All pages must be client components ("use client")
+  - Use hooks for data fetching (TanStack Query)
+  - Keep pages focused on composition, not business logic
+
+## Data Fetching
+
+- Use TanStack Query (@tanstack/react-query) for all data fetching
+- Create custom hooks in `/src/hooks/` that wrap `useQuery` or `useMutation`
+- Always type the query result: `UseQueryResult<DataType, Error>`
+- Set appropriate `refetchInterval` for real-time data
+- Handle loading and error states in components
+
+## App Shell Structure
+
+- The app uses an AppShell component that wraps all pages
+- AppShell includes: Sidebar, MobileNavbar, AppHeader, and Content area
+- Navigation is handled through MenuContent component
+- Breadcrumbs and page titles are automatically generated from route config
+
+## Best Practices
+
+- Keep components small and focused
+- Extract reusable logic into custom hooks
+- Use proper error handling with try/catch and error boundaries
+- Add loading states for async operations (use Spin component from Ant Design)
+- Make designs responsive and accessible
+- Use Ant Design components for UI consistency
+- Type all function parameters, return types, and component props
+- Use path aliases (@/) for imports instead of relative paths
+
