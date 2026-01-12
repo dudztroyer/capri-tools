@@ -20,6 +20,16 @@ export const routeConfig: Record<string, RouteConfig> = {
     title: "Tábua de Maré Mensal",
     breadcrumb: ["Home", "Tábua de Maré Mensal"],
   },
+  "/navios": {
+    path: "/navios",
+    title: "Navios na Baía (BETA)",
+    breadcrumb: ["Home", "Navios na Baía"],
+  },
+  "/pesca": {
+    path: "/pesca",
+    title: "Possibilidade de Pesca",
+    breadcrumb: ["Home", "Possibilidade de Pesca"],
+  },
 };
 
 export function getRouteConfig(pathname: string): RouteConfig {

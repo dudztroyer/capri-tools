@@ -7,6 +7,8 @@ import {
   LineChartOutlined,
   CheckCircleOutlined,
   ClockCircleOutlined,
+  RocketOutlined,
+  CloudOutlined,
 } from "@ant-design/icons";
 import { useRouter, usePathname } from "next/navigation";
 import { AppStyles } from "@/types/styles";
@@ -34,7 +36,7 @@ export default function MenuContent({ styles }: MenuContentProps) {
     const today = new Date();
     const tomorrow = new Date(today);
     tomorrow.setDate(tomorrow.getDate() + 1);
-    
+
     if (date.toDateString() === today.toDateString()) {
       return "Hoje";
     } else if (date.toDateString() === tomorrow.toDateString()) {
@@ -84,6 +86,23 @@ export default function MenuContent({ styles }: MenuContentProps) {
       key: "/tide-table",
       icon: <LineChartOutlined />,
       label: "Tábua de Maré Mensal",
+    },
+    {
+      key: "/pesca",
+      icon: <CloudOutlined />,
+      label: "Possibilidade de Pesca",
+    },
+    {
+      key: "/navios",
+      icon: <RocketOutlined />,
+      label: (
+        <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+          <span>Navios na Baía</span>
+          <Tag color="blue" style={{ margin: 0, fontSize: "9px", padding: "0 4px", lineHeight: "16px" }}>
+            BETA
+          </Tag>
+        </div>
+      ),
     },
   ];
 

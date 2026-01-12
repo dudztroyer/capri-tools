@@ -61,7 +61,7 @@ function findPassagemWindows(
   endDate: Date
 ): PassagemWindow[] {
   const windows: PassagemWindow[] = [];
-  
+
   // Sort points by date and time
   const sortedPoints = [...points].sort((a, b) => {
     const dateA = createDateFromPoint(a);
@@ -113,18 +113,18 @@ function findPassagemWindows(
         // End of a window - calculate direction counts
         const windowEnd = createDateFromPoint(lastPassablePoint);
         windowEnd.setMinutes(windowEnd.getMinutes() + 15);
-        
+
         // Count direction changes within the window
         // Count only transitions: up->down or down->up
         let risingCount = 0;
         let fallingCount = 0;
         let prevDirection: "up" | "down" | undefined;
         let initialDirection: "up" | "down" | undefined;
-        
+
         // Determine initial direction
         if (windowPoints.length > 0) {
           const firstPoint = windowPoints[0];
-          
+
           // Try to get direction from the point itself
           if (firstPoint.direction) {
             initialDirection = firstPoint.direction;
@@ -133,12 +133,12 @@ function findPassagemWindows(
             initialDirection = getDirection(firstPoint, windowPoints[1]);
           } else {
             // Only one point - try to find direction by comparing with adjacent points
-            const pointIndex = relevantPoints.findIndex(p => 
-              p.day === firstPoint.day && 
-              p.hour === firstPoint.hour && 
+            const pointIndex = relevantPoints.findIndex(p =>
+              p.day === firstPoint.day &&
+              p.hour === firstPoint.hour &&
               p.minute === firstPoint.minute
             );
-            
+
             if (pointIndex > 0) {
               // Compare with previous point
               const prevPoint = relevantPoints[pointIndex - 1];
@@ -150,11 +150,11 @@ function findPassagemWindows(
             }
           }
         }
-        
+
         // Analyze direction by comparing consecutive points
         for (let j = 0; j < windowPoints.length - 1; j++) {
           const direction = getDirection(windowPoints[j], windowPoints[j + 1]);
-          
+
           if (direction) {
             // Count only when direction actually changes (transitions)
             if (prevDirection !== undefined && direction !== prevDirection) {
@@ -170,7 +170,7 @@ function findPassagemWindows(
             prevDirection = direction;
           }
         }
-        
+
         windows.push({
           start: windowStart,
           end: windowEnd,
@@ -190,18 +190,18 @@ function findPassagemWindows(
   if (windowStart && lastPassablePoint) {
     const windowEnd = createDateFromPoint(lastPassablePoint);
     windowEnd.setMinutes(windowEnd.getMinutes() + 15);
-    
+
     // Calculate direction counts for the final window
     // Count only transitions: up->down or down->up
     let risingCount = 0;
     let fallingCount = 0;
     let prevDirection: "up" | "down" | undefined;
     let initialDirection: "up" | "down" | undefined;
-    
+
     // Determine initial direction
     if (windowPoints.length > 0) {
       const firstPoint = windowPoints[0];
-      
+
       // Try to get direction from the point itself
       if (firstPoint.direction) {
         initialDirection = firstPoint.direction;
@@ -210,12 +210,12 @@ function findPassagemWindows(
         initialDirection = getDirection(firstPoint, windowPoints[1]);
       } else {
         // Only one point - try to find direction by comparing with adjacent points
-        const pointIndex = relevantPoints.findIndex(p => 
-          p.day === firstPoint.day && 
-          p.hour === firstPoint.hour && 
+        const pointIndex = relevantPoints.findIndex(p =>
+          p.day === firstPoint.day &&
+          p.hour === firstPoint.hour &&
           p.minute === firstPoint.minute
         );
-        
+
         if (pointIndex > 0) {
           // Compare with previous point
           const prevPoint = relevantPoints[pointIndex - 1];
@@ -227,10 +227,10 @@ function findPassagemWindows(
         }
       }
     }
-    
+
     for (let j = 0; j < windowPoints.length - 1; j++) {
       const direction = getDirection(windowPoints[j], windowPoints[j + 1]);
-      
+
       if (direction) {
         // Count only when direction actually changes (transitions)
         if (prevDirection !== undefined && direction !== prevDirection) {
@@ -245,7 +245,7 @@ function findPassagemWindows(
         prevDirection = direction;
       }
     }
-    
+
     windows.push({
       start: windowStart,
       end: windowEnd,
@@ -297,12 +297,12 @@ function calculateLanchaPassaDataFromPoints(
   // Calculate current direction by comparing closest point with next point
   let currentDirection: "up" | "down" | undefined;
   if (closestPoint) {
-    const closestIndex = sortedPoints.findIndex(p => 
-      p.day === closestPoint!.day && 
-      p.hour === closestPoint!.hour && 
+    const closestIndex = sortedPoints.findIndex(p =>
+      p.day === closestPoint!.day &&
+      p.hour === closestPoint!.hour &&
       p.minute === closestPoint!.minute
     );
-    
+
     // Use direction from point if available, otherwise compare with next point
     if (closestPoint.direction) {
       currentDirection = closestPoint.direction;
@@ -391,7 +391,7 @@ export function useLanchaPassa(): UseQueryResult<LanchaPassaData, Error> {
   const { now, currentMonth, currentYear } = useClientDate();
 
   // Get current month data with interpolation using React Query
-  const { data: currentMonthData, isLoading: isLoadingCurrent, error: errorCurrent } = useTideDataForMonth(harbor, currentMonth);
+  const { data: currentMonthData, isLoading: isLoadingCurrent } = useTideDataForMonth(harbor, currentMonth);
 
   // Determine if we need next month data
   const daysUntilMonthEnd = new Date(currentYear, currentMonth, 0).getDate() - now.getDate();
@@ -400,7 +400,7 @@ export function useLanchaPassa(): UseQueryResult<LanchaPassaData, Error> {
   const nextMonthYear = currentMonth === 12 ? currentYear + 1 : currentYear;
 
   // Get next month data conditionally using React Query
-  const { data: nextMonthData, isLoading: isLoadingNext, error: errorNext } = useQuery<TideDataWithInterpolation, Error>({
+  const { data: nextMonthData, isLoading: isLoadingNext } = useQuery<TideDataWithInterpolation, Error>({
     queryKey: ["tideData", harbor, nextMonth],
     queryFn: () => getTideDataWithInterpolation(harbor, nextMonth),
     staleTime: Infinity,
@@ -415,7 +415,7 @@ export function useLanchaPassa(): UseQueryResult<LanchaPassaData, Error> {
     if (needsNextMonth && !nextMonthData) return undefined;
 
     const allPoints: ContinuousDataPointWithMonth[] = [];
-    
+
     // Add current month's continuous data
     currentMonthData.continuousData.forEach(point => {
       allPoints.push({
@@ -424,7 +424,7 @@ export function useLanchaPassa(): UseQueryResult<LanchaPassaData, Error> {
         year: currentMonthData.year,
       });
     });
-    
+
     // Add next month's continuous data if available
     if (needsNextMonth && nextMonthData) {
       nextMonthData.continuousData.forEach(point => {
@@ -459,7 +459,7 @@ export function useLanchaPassa(): UseQueryResult<LanchaPassaData, Error> {
       }
 
       const allPoints: ContinuousDataPointWithMonth[] = [];
-      
+
       // Add current month's continuous data
       currentMonthData.continuousData.forEach(point => {
         allPoints.push({
@@ -468,7 +468,7 @@ export function useLanchaPassa(): UseQueryResult<LanchaPassaData, Error> {
           year: currentMonthData.year,
         });
       });
-      
+
       // Add next month's continuous data if available
       if (needsNextMonth && nextMonthData) {
         nextMonthData.continuousData.forEach(point => {
