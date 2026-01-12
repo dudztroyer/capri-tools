@@ -1,4 +1,1 @@
-git --version
-where git
-echo $PATH
 npx lint-staged
