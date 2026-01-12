@@ -68,7 +68,7 @@ function JsonNode({ name, value, level, initialExpanded }: JsonNodeProps) {
 
     if (!isObject) {
         // Primitive value
-        let valueStyle = styles.null;
+        let valueStyle: { color: string; fontStyle?: "italic" } = styles.null;
         let displayValue: string;
 
         if (typeof value === "string") {
