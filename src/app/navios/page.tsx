@@ -1,16 +1,67 @@
 "use client";
 import React, { useMemo, useState } from "react";
-import { Row, Col, Spin, Alert, Empty, Typography, Card, Grid } from "antd";
-
-const { useBreakpoint } = Grid;
-import { CompassOutlined } from "@ant-design/icons";
+import { Row, Col, Spin, Alert, Empty, Typography, Card, Grid, Collapse } from "antd";
+import { CompassOutlined, RadarChartOutlined } from "@ant-design/icons";
 import { useNavios } from "@/hooks/useNavios";
 import ShipCard from "@/components/navios/ShipCard";
 import ShipStats from "@/components/navios/ShipStats";
 import ShipFilters, { ShipFiltersState } from "@/components/navios/ShipFilters";
 import { Ship, calculateAnchorTime } from "@/services/shipService";
 
+const { useBreakpoint } = Grid;
 const { Text } = Typography;
+
+// VesselFinder URL Builder
+interface VesselFinderParams {
+    latitude: number;
+    longitude: number;
+    zoom: number;
+    width?: string | number;
+    height?: number;
+    showNames?: boolean;
+    showTrack?: boolean;
+    clickToActivate?: boolean;
+    storePosition?: boolean;
+    mmsi?: number;
+    imo?: number;
+    defaultMapType?: string;
+}
+
+const buildVesselFinderUrl = ({
+    latitude,
+    longitude,
+    zoom,
+    width = "100%",
+    height = 450,
+    showNames = false,
+    showTrack = false,
+    clickToActivate = false,
+    storePosition = false,
+    mmsi,
+    imo,
+    defaultMapType,
+}: VesselFinderParams): string => {
+    const params = new URLSearchParams();
+
+    params.set("zoom", String(zoom));
+    params.set("lat", String(latitude));
+    params.set("lon", String(longitude));
+    params.set("width", String(width));
+    params.set("height", String(height));
+    params.set("names", String(showNames));
+    params.set("track", String(showTrack));
+    params.set("clicktoact", String(clickToActivate));
+    params.set("store_pos", String(storePosition));
+    params.set("fleet", "false");
+    params.set("fleet_name", "false");
+    params.set("fleet_hide_old_positions", "false");
+
+    if (mmsi !== undefined) params.set("mmsi", String(mmsi));
+    if (imo !== undefined) params.set("imo", String(imo));
+    if (defaultMapType !== undefined) params.set("default_maptype", defaultMapType);
+
+    return `https://www.vesselfinder.com/aismap?${params.toString()}`;
+};
 
 interface MarineTrafficParams {
     centerX: number;
@@ -50,6 +101,18 @@ export default function NaviosPage() {
                 centerX: -48.383,
                 centerY: -26.168,
                 zoom: isMobile ? 10 : 11,
+                showNames: false,
+            }),
+        [isMobile]
+    );
+
+    const vesselFinderUrl = useMemo(
+        () =>
+            buildVesselFinderUrl({
+                latitude: -26.168,
+                longitude: -48.383,
+                zoom: isMobile ? 10 : 11,
+                height: 450,
                 showNames: false,
             }),
         [isMobile]
@@ -147,7 +210,7 @@ export default function NaviosPage() {
 
     return (
         <div style={{ marginTop: "24px" }}>
-            {/* Marine Traffic Map Embed */}
+            {/* Ship Tracking Maps Accordion */}
             <Card
                 title={
                     <span style={{ display: "flex", alignItems: "center", gap: 8 }}>
@@ -160,17 +223,57 @@ export default function NaviosPage() {
                     body: { padding: 0, overflow: "hidden" },
                 }}
             >
-                <iframe
-                    src={marineTrafficUrl}
-                    width="100%"
-                    height="450"
-                    style={{
-                        border: "none",
-                        display: "block",
-                    }}
-                    title="Marine Traffic - Baía da Babitonga"
-                    loading="lazy"
-                    allowFullScreen
+                <Collapse
+                    defaultActiveKey={["vesselfinder"]}
+                    accordion
+                    items={[
+                        {
+                            key: "vesselfinder",
+                            label: (
+                                <span style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                                    <RadarChartOutlined style={{ color: "#52c41a" }} />
+                                    VesselFinder
+                                </span>
+                            ),
+                            children: (
+                                <iframe
+                                    src={vesselFinderUrl}
+                                    width="100%"
+                                    height="450"
+                                    style={{
+                                        border: "none",
+                                        display: "block",
+                                    }}
+                                    title="VesselFinder - Baía da Babitonga"
+                                    loading="lazy"
+                                    allowFullScreen
+                                />
+                            ),
+                        },
+                        {
+                            key: "marinetraffic",
+                            label: (
+                                <span style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                                    <CompassOutlined style={{ color: "#1890ff" }} />
+                                    Marine Traffic
+                                </span>
+                            ),
+                            children: (
+                                <iframe
+                                    src={marineTrafficUrl}
+                                    width="100%"
+                                    height="450"
+                                    style={{
+                                        border: "none",
+                                        display: "block",
+                                    }}
+                                    title="Marine Traffic - Baía da Babitonga"
+                                    loading="lazy"
+                                    allowFullScreen
+                                />
+                            ),
+                        },
+                    ]}
                 />
             </Card>
 
