@@ -1,6 +1,9 @@
 "use client";
 import React, { useMemo, useState } from "react";
-import { Row, Col, Spin, Alert, Empty, Typography } from "antd";
+import { Row, Col, Spin, Alert, Empty, Typography, Card, Grid } from "antd";
+
+const { useBreakpoint } = Grid;
+import { CompassOutlined } from "@ant-design/icons";
 import { useNavios } from "@/hooks/useNavios";
 import ShipCard from "@/components/navios/ShipCard";
 import ShipStats from "@/components/navios/ShipStats";
@@ -9,8 +12,48 @@ import { Ship, calculateAnchorTime } from "@/services/shipService";
 
 const { Text } = Typography;
 
+interface MarineTrafficParams {
+    centerX: number;
+    centerY: number;
+    zoom: number;
+    showNames?: boolean;
+    mapType?: 0 | 1 | 4; // 0 = normal, 1 = satellite, 4 = dark
+}
+
+const buildMarineTrafficUrl = ({
+    centerX,
+    centerY,
+    zoom,
+    showNames = true,
+    mapType,
+}: MarineTrafficParams): string => {
+    let url = `https://www.marinetraffic.com/en/ais/embed/centerx:${centerX}/centery:${centerY}/zoom:${zoom}/shownames:${showNames}`;
+
+    if (mapType !== undefined) {
+        url += `/maptype:${mapType}`;
+    }
+
+
+    return url + "/";
+};
+
 export default function NaviosPage() {
     const { data, isLoading, error } = useNavios();
+    const screens = useBreakpoint();
+
+    // Ant Design breakpoints: xs (<576), sm (≥576), md (≥768), lg (≥992), xl (≥1200), xxl (≥1600)
+    const isMobile = !screens.md;
+
+    const marineTrafficUrl = useMemo(
+        () =>
+            buildMarineTrafficUrl({
+                centerX: -48.383,
+                centerY: -26.168,
+                zoom: isMobile ? 10 : 11,
+                showNames: false,
+            }),
+        [isMobile]
+    );
 
     const [filters, setFilters] = useState<ShipFiltersState>({
         search: "",
@@ -104,6 +147,33 @@ export default function NaviosPage() {
 
     return (
         <div style={{ marginTop: "24px" }}>
+            {/* Marine Traffic Map Embed */}
+            <Card
+                title={
+                    <span style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                        <CompassOutlined style={{ color: "#1890ff" }} />
+                        Mapa de Tráfego Marítimo - Baía da Babitonga
+                    </span>
+                }
+                style={{ marginBottom: 24 }}
+                styles={{
+                    body: { padding: 0, overflow: "hidden" },
+                }}
+            >
+                <iframe
+                    src={marineTrafficUrl}
+                    width="100%"
+                    height="450"
+                    style={{
+                        border: "none",
+                        display: "block",
+                    }}
+                    title="Marine Traffic - Baía da Babitonga"
+                    loading="lazy"
+                    allowFullScreen
+                />
+            </Card>
+
             {/* Statistics overview */}
             <ShipStats ships={data.ships} lastUpdated={data.lastUpdated} />
 
